@@ -17,6 +17,6 @@ endin
 
 </CsInstruments>
 <CsScore>
-i "testOSC" 2 1
+i "testOSC" 0 0.1
 </CsScore>
 </CsoundSynthesizer>
