@@ -6,14 +6,20 @@ let
 
   f = { mkDerivation, base, csound-expression, deepseq, lens
       , linear, mtl, random, reactive-banana, sdl2, sdl2-compositor
-      , stdenv, text, transformers
+      , stdenv, text, transformers, csound
       }:
+      let
+        csound_custom = csound.overrideDerivation(old: {
+          buildInputs = old.buildInputs ++ [ pkgs.liblo ];
+        });
+      in
       mkDerivation {
         pname = "spaceshooter";
         version = "0.1.0.0";
         src = ./.;
         isLibrary = false;
         isExecutable = true;
+        executableSystemDepends = [ csound_custom ];
         executableHaskellDepends = [
           base csound-expression deepseq lens linear mtl random
           reactive-banana sdl2 sdl2-compositor text transformers
