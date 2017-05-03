@@ -13,4 +13,7 @@ configure:
 haddock:
 	nix-shell --command "cabal haddock --executable"
 
+test:
+	nix-shell --command "cabal test"
+
 .PHONY: run build shell
