@@ -21,6 +21,7 @@ import           Random
 import           Reactive
 import           Shoot
 import           Spaceship
+import           Sound
 
 network = mdo
   keyboardE <- keyboardEvents
@@ -98,6 +99,7 @@ network = mdo
         facts spaceshipGraphics
       )
     outputRenderTick = () <$ ticks
+  reactimate $ shootSound <$ shootE
   return $ Output {..}
   where
     initialSpaceship =

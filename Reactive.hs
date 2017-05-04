@@ -10,7 +10,7 @@ import Data.Text
 import GHC.Word
 import Linear.V2 as L
 import Reactive.Banana as RB
-import Reactive.Banana.Frameworks
+import Reactive.Banana.Frameworks as RB
 import SDL hiding (clear, present)
 import SDL.Compositor
 import SDL.Compositor.ResIndependent
@@ -59,7 +59,7 @@ runNetwork title action = do
       let
         tickE = outputRenderTick output
         imageB = outputImage output
-      reactimate $ doRendering <$> (imageB <@ tickE)
+      RB.reactimate $ doRendering <$> (imageB <@ tickE)
     doRendering image = do
       clear renderer
       runRenderer renderer absoluteImage
@@ -84,6 +84,9 @@ runNetwork title action = do
   program <- compile network
   actuate program
   eventLoop
+
+reactimate :: RB.Event (IO ()) -> Game ()
+reactimate = lift . lift . RB.reactimate
 
 sdlEventStream :: Game (RB.Event EventPayload)
 sdlEventStream = lift (GameNetwork (asks inputSdlEvents) :: GameNetwork MomentIO (RB.Event EventPayload))
