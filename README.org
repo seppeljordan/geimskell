@@ -1,0 +1,11 @@
+#+title: Geimskell
+
+* Introduction
+  One day geimskell will be a video game.
+
+* Audio
+  We use csound and it's osc sound capabilities as a sound engine.
+  Once the game is started we spawn an instace of csound.  The main
+  game engine and csound communicate via UDP channels.  csound will
+  listen on port 7770 and the game engine itself will listen on
+  port 7771.
