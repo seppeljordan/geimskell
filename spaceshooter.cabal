@@ -33,6 +33,7 @@ executable spaceshooter
                      , csound-expression
                      , QuickCheck
                      , process
+                     , stm
   -- hs-source-dirs:
   default-language:    Haskell2010
 

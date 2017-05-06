@@ -34,7 +34,7 @@ network = mdo
     ScancodeUp ScancodeDown ScancodeLeft ScancodeRight
     =<< stepper (pure 0) (rumors directionT)
   let
-    shootCooldown = pure $ 100 * 1000
+    shootCooldown = pure $ 500 * 1000
     shootTriggerE =
       filterJust . fmap (buttonPressEvent ScancodeSpace) $
       keyboardE
@@ -85,9 +85,9 @@ network = mdo
     enemiesB = wsEnemies <$> worldStateB
     projectilesB = wsProjectiles <$> worldStateB
     playerB = wsPlayer <$> worldStateB
-  reactimate $ shootSound <$ shootE
   let
     outputImage = renderWorldState <$> worldStateB
+    outputSounds = [SoundShoot] <$ shootE
   return $ Output {..}
   where
     initialSpaceship =
@@ -209,7 +209,8 @@ combineToWorldState player projectiles enemies =
     { wsPlayer = player
     , wsProjectiles =
       filter (not . outOfBounds . projectileRect ) newProjectiles
-    , wsEnemies = newEnemies
+    , wsEnemies =
+      filter (not . outOfBounds) newEnemies
     }
   , length enemies - length newEnemies
   )

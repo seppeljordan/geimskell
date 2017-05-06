@@ -1,8 +1,10 @@
+GHC_OPTIONS=--ghc-options=\"-Wall -threaded\"
+
 run:
-	nix-shell --command "cabal run"
+	nix-shell --command "cabal run $(GHC_OPTIONS)"
 
 build:
-	nix-shell --command "cabal build --ghc-options=\"-Wall\""
+	nix-shell --command "cabal build $(GHC_OPTIONS)"
 
 shell:
 	nix-shell

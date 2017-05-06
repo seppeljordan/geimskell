@@ -16,6 +16,8 @@ import SDL.Compositor
 import SDL.Compositor.ResIndependent
 import System.Random as Rand
 
+import Sound
+
 type Tick = ()
 
 type Image = ResIndependent CompositingNode SDL.Texture
@@ -23,6 +25,7 @@ type Image = ResIndependent CompositingNode SDL.Texture
 data Output =
   Output { outputImage :: Behavior Image
          , outputRenderTick :: RB.Event Tick
+         , outputSounds :: RB.Event [SoundEffect]
          }
 
 data EngineInputs = EngineInputs { inputSdlEvents :: RB.Event EventPayload
@@ -33,7 +36,7 @@ data EngineInputs = EngineInputs { inputSdlEvents :: RB.Event EventPayload
 runNetwork :: Text -- ^ The title of the window to be created
            -> Game Output -- ^ the game network to run
            -> IO ()
-runNetwork title action = do
+runNetwork title action = withSoundServer $ \ server -> do
   sdlHandler <- newAddHandler
   timeHandler <- newAddHandler
   window <- createWindow title defaultWindow
@@ -59,7 +62,9 @@ runNetwork title action = do
       let
         tickE = outputRenderTick output
         imageB = outputImage output
+        soundEffectsE = outputSounds output
       RB.reactimate $ doRendering <$> (imageB <@ tickE)
+      RB.reactimate $ mapM_ (playSoundEffect server) <$> soundEffectsE
     doRendering image = do
       clear renderer
       runRenderer renderer absoluteImage
