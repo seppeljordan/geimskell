@@ -52,54 +52,42 @@ network = mdo
       ) <$>
       ((,) <$> shootCooldown <*> shootTriggerB <@ ticks))
   enemiesT <- makeEnemies enemiesB spawnTicks
-  enemiesBeforeCollision <- stepper [] $ rumors enemiesT
   let
-    spaceshipPosition = spaceshipPoint <$> facts spaceship
-    shotsT =
+    projectilesT =
       makeShoot
-      spaceshipPosition
+      (rectangleMidpoint <$> playerB)
       (pure (0.05,0.05))
       shootE
-      shotsB
+      projectilesB
       ticks
-  shotsBeforeCollisionB <- stepper [] $
-    filter deleteProjectile <$>
-    rumors shotsT
-  let
-    enemiesAndShotsB =
-      handleCollisions <$>
-      shotsBeforeCollisionB <*>
-      enemiesBeforeCollision
-    shotsB = fst <$> enemiesAndShotsB
-    enemiesB = snd <$> enemiesAndShotsB
-
-  (spaceship :: Tidings Rectangle) <-
-    makeSpaceship <$>
-    pure ( fmap
-           (vectorScale 0.016 . v2ToVector)
-           (facts directionT <@ ticks)
-         ) <*>
-    stepper initialSpaceship (rumors spaceship)
-  let
-    spaceshipGraphics :: Tidings Image
-    spaceshipGraphics = renderRectangle blue <$> spaceship
-    projectiles =
-      (mconcat . map (renderRectangle red . projectileRect))
-      <$> shotsB
-    enemies =
-      mconcat . map (renderRectangle green) <$> enemiesB
-    background = mempty
-    outputImage :: Behavior Image
-    outputImage =
-      translateR (L.V2 0.5 0.5) .
-      flipC (L.V2 False True) <$>
-      ( background <>
-        enemies <>
-        projectiles <>
-        facts spaceshipGraphics
+    playerT =
+      makeSpaceship
+      ( fmap
+        (vectorScale 0.016 . v2ToVector)
+        (facts directionT <@ ticks)
       )
+      playerB
     outputRenderTick = () <$ ticks
+    worldStateT =
+      combineToWorldState <$>
+      playerT <*>
+      projectilesT <*>
+      enemiesT
+  worldStateB <-
+    stepper
+    ( WorldState { wsPlayer = initialSpaceship
+                 , wsProjectiles = []
+                 , wsEnemies = []
+                 }
+    ) $
+    (rumors worldStateT)
+  let
+    enemiesB = wsEnemies <$> worldStateB
+    projectilesB = wsProjectiles <$> worldStateB
+    playerB = wsPlayer <$> worldStateB
   reactimate $ shootSound <$ shootE
+  let
+    outputImage = renderWorldState <$> worldStateB
   return $ Output {..}
   where
     initialSpaceship =
@@ -214,3 +202,46 @@ deleteProjectile p =
       x = pointX v
       y = pointY v
   in x >= (-5) && x <= 5 && y >= (-5) && y <= 5
+
+type Player = Rectangle
+
+data WorldState = WorldState { wsPlayer :: Player
+                             , wsProjectiles :: [Projectile]
+                             , wsEnemies :: [Enemy]
+                             }
+
+combineToWorldState :: Player
+                    -> [Projectile]
+                    -> [Enemy]
+                    -> WorldState
+combineToWorldState player projectiles enemies =
+  WorldState
+  { wsPlayer = player
+  , wsProjectiles = newProjectiles
+  , wsEnemies = newEnemies
+  }
+  where
+    (newProjectiles, newEnemies) =
+      handleCollisions projectiles enemies
+
+renderWorldState (WorldState { wsPlayer = player
+                             , wsEnemies = enemies
+                             , wsProjectiles = projectiles }) =
+  outputImage
+  where
+    spaceshipGraphics = renderRectangle blue player
+    projectilesImage =
+      mconcat . map (renderRectangle red . projectileRect) $
+      projectiles
+    enemiesImage =
+      mconcat . map (renderRectangle green) $
+      enemies
+    background = mempty
+    outputImage =
+      translateR (L.V2 0.5 0.5) .
+      flipC (L.V2 False True) $
+      ( background <>
+        enemiesImage <>
+        projectilesImage <>
+        spaceshipGraphics
+      )

@@ -67,8 +67,6 @@ runNetwork title action = do
       where
         absoluteImage :: CompositingNode SDL.Texture
         absoluteImage = fromRelativeCompositor (fromIntegral <$> resolutionLinear) image
-
-
     fireIfNotQuit (SDL.Event { eventPayload = ev })
       | ev == QuitEvent = return True
       | otherwise = (snd sdlHandler) ev >> return False
@@ -89,7 +87,9 @@ reactimate :: RB.Event (IO ()) -> Game ()
 reactimate = lift . lift . RB.reactimate
 
 sdlEventStream :: Game (RB.Event EventPayload)
-sdlEventStream = lift (GameNetwork (asks inputSdlEvents) :: GameNetwork MomentIO (RB.Event EventPayload))
+sdlEventStream =
+  lift
+  (GameNetwork $ asks inputSdlEvents)
 
 keyboardEvents :: Game (RB.Event KeyboardEventData)
 keyboardEvents =
@@ -114,7 +114,13 @@ unionsWith fun (x:xs) = unionWith fun x (unionsWith fun xs)
 
 filterRepeats ev = do
   (maybeEvents, _) <- mapAccum Nothing $
-    (\ x -> maybe (Just x, Just x) (\ y -> if x == y then (Nothing, Just y) else (Just x, Just x))) <$> ev
+    (\ x ->
+       maybe
+       (Just x, Just x)
+       (\ y -> if x == y
+               then (Nothing, Just y)
+               else (Just x, Just x))
+    ) <$> ev
   return $ filterJust maybeEvents
 
 -- | generateTicks takes as its argument the desired interval in micro
