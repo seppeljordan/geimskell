@@ -16,4 +16,7 @@ haddock:
 test:
 	nix-shell --command "cabal test"
 
-.PHONY: run build shell
+sound-server:
+	nix-shell --command "csound -odac osc_receive.csd"
+
+.PHONY: run build shell configure haddock test sound-server

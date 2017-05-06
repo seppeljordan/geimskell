@@ -217,12 +217,19 @@ combineToWorldState :: Player
 combineToWorldState player projectiles enemies =
   WorldState
   { wsPlayer = player
-  , wsProjectiles = newProjectiles
+  , wsProjectiles =
+    filter (not . outOfBounds . projectileRect ) newProjectiles
   , wsEnemies = newEnemies
   }
   where
     (newProjectiles, newEnemies) =
       handleCollisions projectiles enemies
+    outOfBounds rect =
+      x <= (-5) || x > 5 || y <= (-5) || y > 5
+      where
+        x = pointX p
+        y = pointY p
+        p = rectangleMidpoint rect
 
 renderWorldState (WorldState { wsPlayer = player
                              , wsEnemies = enemies
