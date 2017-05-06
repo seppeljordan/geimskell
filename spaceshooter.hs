@@ -51,7 +51,7 @@ network = mdo
             else (Nothing, cooldownTimer)
       ) <$>
       ((,) <$> shootCooldown <*> shootTriggerB <@ ticks))
-  enemiesT <- makeEnemies enemiesB spawnTicks
+  enemiesT <- makeEnemies enemiesB spawnTicks ticks
   let
     projectilesT =
       makeShoot
@@ -80,7 +80,7 @@ network = mdo
                  , wsEnemies = []
                  }
     ) $
-    (rumors worldStateT)
+    (fst <$> rumors worldStateT)
   let
     enemiesB = wsEnemies <$> worldStateB
     projectilesB = wsProjectiles <$> worldStateB
@@ -197,12 +197,6 @@ handleCollisions projectiles enemies =
     isProjectileCollision r =
       or . map (rectanglesOverlap r . projectileRect) $ projectiles
 
-deleteProjectile p =
-  let v = projectilePosition p
-      x = pointX v
-      y = pointY v
-  in x >= (-5) && x <= 5 && y >= (-5) && y <= 5
-
 type Player = Rectangle
 
 data WorldState = WorldState { wsPlayer :: Player
@@ -210,17 +204,15 @@ data WorldState = WorldState { wsPlayer :: Player
                              , wsEnemies :: [Enemy]
                              }
 
-combineToWorldState :: Player
-                    -> [Projectile]
-                    -> [Enemy]
-                    -> WorldState
 combineToWorldState player projectiles enemies =
-  WorldState
-  { wsPlayer = player
-  , wsProjectiles =
-    filter (not . outOfBounds . projectileRect ) newProjectiles
-  , wsEnemies = newEnemies
-  }
+  ( WorldState
+    { wsPlayer = player
+    , wsProjectiles =
+      filter (not . outOfBounds . projectileRect ) newProjectiles
+    , wsEnemies = newEnemies
+    }
+  , length enemies - length newEnemies
+  )
   where
     (newProjectiles, newEnemies) =
       handleCollisions projectiles enemies
