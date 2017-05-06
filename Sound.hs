@@ -2,39 +2,56 @@
 
 module Sound where
 
+import Control.Concurrent
 import Control.Concurrent.STM.TChan
 import Control.Exception
 import Control.Monad.STM
+import Sound.OSC.Transport.FD
+import Sound.OSC.Transport.FD.UDP
+import Sound.OSC.Type
 import System.Process
-import Control.Concurrent
 
 data SoundEffect = SoundShoot
 
 sendCommand server action =
   atomically $ writeTChan (serverCommandChannel server) action
 
-playSoundEffect server SoundShoot = sendCommand server (callCommand "csound -odac osc_send.csd")
+playSoundEffect server SoundShoot =
+  sendCommand server action
+  where
+    action trans = sendMessage trans $
+      message "/shoot" [Float 66.6]
 
 withSoundServer action = do
   server <- createServer
   action server `finally` destroyServer server
 
 data SoundServer =
-  SoundServer { serverCommandChannel :: TChan (IO ())
-              , serverThreadId :: ThreadId
+  SoundServer { serverCommandChannel :: TChan (UDP -> IO ())
+              , serverProcessThreadId :: ThreadId
+              , serverClientThreadId :: ThreadId
+              , serverUdpCon :: UDP
               }
 
 createServer = do
   serverCommandChannel <- newTChanIO
-  serverThreadId <- forkIO $ runServer serverCommandChannel
+  serverProcessThreadId <-
+    forkIO $ do
+      callCommand "csound -odac osc_receive.csd"
+  serverUdpCon <- openUDP "127.0.0.1" 7770
+  serverClientThreadId <-
+    forkIO $ runServer serverCommandChannel serverUdpCon
   return SoundServer {..}
 
-destroyServer = killThread . serverThreadId
+destroyServer s = do
+  mapM_ (killThread . (flip ($) s))
+    [serverProcessThreadId, serverClientThreadId]
+  close $ serverUdpCon s
 
-runServer chan =
+runServer chan udp =
   go
   where
     go = do
-      cmd <- atomically $ readTChan chan
-      _ <- cmd
+      action <- atomically $ readTChan chan
+      _ <- action udp
       go

@@ -11,7 +11,7 @@ nchnls = 2
 instr testOSC
   print 6
   OSCsend 1, "localhost", 7770, "/shoot", "f",66.6
-  
+
 endin
 
 
