@@ -5,6 +5,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 import           Control.DeepSeq
+import           Control.Monad
 import           Data.Monoid
 import           GHC.Generics
 import qualified Linear.V2 as L
@@ -23,7 +24,7 @@ import           Shoot
 import           Spaceship
 import           Sound
 
-network = mdo
+gameplay pauseB = mdo
   keyboardE <- keyboardEvents
   let
     delta = 16666 :: Int
@@ -40,7 +41,7 @@ network = mdo
       keyboardE
   shootTriggerB <- stepper False shootTriggerE
   shootE <-
-    filterJust . fst <$> mapAccum 0
+    whenE (not <$> pauseB) . filterJust . fst <$> mapAccum 0
     ( (\ (cooldown, tryShoot) cooldownTimer' ->
           let
             cooldownTimer = min
@@ -75,12 +76,8 @@ network = mdo
       enemiesT
   worldStateB <-
     stepper
-    ( WorldState { wsPlayer = initialSpaceship
-                 , wsProjectiles = []
-                 , wsEnemies = []
-                 }
-    ) $
-    (fst <$> rumors worldStateT)
+    initialWorldState $
+    (whenE (not <$> pauseB) $ fst <$> rumors worldStateT)
   let
     enemiesB = wsEnemies <$> worldStateB
     projectilesB = wsProjectiles <$> worldStateB
@@ -88,18 +85,85 @@ network = mdo
   let
     outputImage = renderWorldState <$> worldStateB
     outputSounds = [SoundShoot] <$ shootE
+    outputRequestsQuit = never
   return $ Output {..}
   where
+    initialWorldState =
+      WorldState { wsPlayer = initialSpaceship
+                 , wsProjectiles = []
+                 , wsEnemies = []
+                 }
     initialSpaceship =
       makeRectangle
       (makeVector (-0.1) (-0.1))
       (makeVector 0.1 0.1)
 
+data Menu = MenuStart | MenuQuit
+  deriving Eq
+
+menu = mdo
+  keyboardE <- keyboardEvents
+  let delta = 16000
+  ticks <- generateTicks (pure delta)
+  let
+    arrowUpE =
+      filterE id . filterJust $
+      buttonPressEvent ScancodeUp <$> keyboardE
+    arrowDownE =
+      filterE id . filterJust $
+      buttonPressEvent ScancodeDown <$> keyboardE
+    enterE = filterE id . filterJust $
+      buttonPressEvent ScancodeReturn <$> keyboardE
+    escapeE = filterE id . filterJust $
+      buttonPressEvent ScancodeEscape <$> keyboardE
+  pauseB <- accumB True $ not <$ escapeE
+  menuSelection <- stepper MenuStart $
+    unionWith const
+    (MenuStart <$ arrowUpE)
+    (MenuQuit <$ arrowDownE)
+  let
+    startImage = renderRectangle <$>
+      ((\m -> case m of
+           MenuStart -> red
+           MenuQuit -> blue
+       ) <$> menuSelection) <*>
+      pure (makeRectangle
+            (makeVector (-0.4) 0.1)
+            (makeVector (0.4) 0.4))
+    quitImage = renderRectangle <$>
+      ((\m -> case m of
+           MenuStart -> blue
+           MenuQuit -> red
+       ) <$> menuSelection) <*>
+      pure ( makeRectangle
+             (makeVector (-0.4) (-0.4))
+             (makeVector (0.4) (-0.1)))
+    oImage =
+      translateR (L.V2 0.5 0.5) <$> startImage <> quitImage
+    oSounds = never
+    oRenderTick = ticks
+    oRequestsQuit = void . filterE (== MenuQuit) $
+      menuSelection <@ enterE
+  gameOutput <- gameplay pauseB
+  let
+    menuOutput = Output
+      { outputSounds = oSounds <> outputSounds gameOutput
+      , outputRenderTick = oRenderTick
+      , outputRequestsQuit = oRequestsQuit
+      , outputImage =
+        (\ pause menu game ->
+           if pause then menu else game ) <$>
+        pauseB <*>
+        oImage <*>
+        outputImage gameOutput
+      }
+  return $ menuOutput
+
 red = rgba 255 0 0 255
 blue = rgba 0 0 255 255
 green = rgba 0 255 0 255
 
-main = withSdl $ runNetwork "spaceshooter" network
+main = withSdl $ runNetwork "spaceshooter" menu
 
 withSdl action = do
   initializeAll

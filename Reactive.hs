@@ -2,7 +2,9 @@
 
 module Reactive where
 
+import Control.Concurrent.STM.TVar
 import Control.Monad.Fix
+import Control.Monad.STM
 import Control.Monad.Trans
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.State as State
@@ -26,7 +28,16 @@ data Output =
   Output { outputImage :: Behavior Image
          , outputRenderTick :: RB.Event Tick
          , outputSounds :: RB.Event [SoundEffect]
+         , outputRequestsQuit :: RB.Event ()
          }
+
+instance Monoid Output where
+  mempty = Output mempty mempty mempty mempty
+  mappend a b = Output { outputImage = mappend (outputImage a) (outputImage b)
+                       , outputRenderTick = mappend (outputRenderTick a) (outputRenderTick b)
+                       , outputSounds = mappend (outputSounds a) (outputSounds b)
+                       , outputRequestsQuit = mappend (outputRequestsQuit a) (outputRequestsQuit b)
+                       }
 
 data EngineInputs = EngineInputs { inputSdlEvents :: RB.Event EventPayload
                                  , inputTimeEvents :: RB.Event Word32
@@ -46,6 +57,7 @@ runNetwork title action = withSoundServer $ \ server -> do
     resolution = V2 800 600
     resolutionLinear = L.V2 800 600 :: L.V2 Int
   rendererLogicalSize renderer $= Just resolution
+  requestsQuit <- newTVarIO False
   gen <- newStdGen
   let
     network = do
@@ -63,8 +75,11 @@ runNetwork title action = withSoundServer $ \ server -> do
         tickE = outputRenderTick output
         imageB = outputImage output
         soundEffectsE = outputSounds output
+        requestsQuitE = outputRequestsQuit output
       RB.reactimate $ doRendering <$> (imageB <@ tickE)
       RB.reactimate $ mapM_ (playSoundEffect server) <$> soundEffectsE
+      RB.reactimate $ (atomically $ writeTVar requestsQuit True) <$
+        requestsQuitE
     doRendering image = do
       clear renderer
       runRenderer renderer absoluteImage
@@ -79,7 +94,10 @@ runNetwork title action = withSoundServer $ \ server -> do
       now <- ticks
       let go t0 = do
             sdlEvents <- pollEvents
-            abort <- or <$> mapM fireIfNotQuit sdlEvents
+            sdlQuit <- or <$> mapM fireIfNotQuit sdlEvents
+            userQuit <- readTVarIO requestsQuit
+            let
+              abort = sdlQuit || userQuit
             t1 <- ticks
             (snd timeHandler) (t1 - t0)
             if abort then return () else go t1
