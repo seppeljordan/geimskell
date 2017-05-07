@@ -1,4 +1,4 @@
-# Revision history for spaceshooter
+# Revision history for geimskell
 
 ## 0.1.0.0  -- YYYY-mm-dd
 
