@@ -114,9 +114,8 @@ menu = mdo
       buttonPressEvent ScancodeDown <$> keyboardE
     enterE = filterE id . filterJust $
       buttonPressEvent ScancodeReturn <$> keyboardE
-    escapeE = filterE id . filterJust $
+    escapeE = void . filterE id . filterJust $
       buttonPressEvent ScancodeEscape <$> keyboardE
-  pauseB <- accumB True $ not <$ escapeE
   menuSelection <- stepper MenuStart $
     unionWith const
     (MenuStart <$ arrowUpE)
@@ -142,8 +141,14 @@ menu = mdo
       translateR (L.V2 0.5 0.5) <$> startImage <> quitImage
     oSounds = never
     oRenderTick = ticks
-    oRequestsQuit = void . filterE (== MenuQuit) $
+    exitButtonE =
+      void . whenE pauseB . filterE (== MenuQuit) $
       menuSelection <@ enterE
+    startButtonE =
+      void . whenE pauseB . filterE (== MenuStart) $
+      menuSelection <@ enterE
+    oRequestsQuit = exitButtonE
+  pauseB <- accumB True $ not <$ unionsWith const [escapeE,startButtonE]
   gameOutput <- gameplay pauseB
   let
     menuOutput = Output
