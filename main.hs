@@ -116,7 +116,7 @@ menu = mdo
       buttonPressEvent ScancodeReturn <$> keyboardE
     escapeE = void . filterE id . filterJust $
       buttonPressEvent ScancodeEscape <$> keyboardE
-  menuSelection <- stepper MenuStart $
+  menuSelection <- stepper MenuStart $ whenE pauseB $
     unionWith const
     (MenuStart <$ arrowUpE)
     (MenuQuit <$ arrowDownE)
