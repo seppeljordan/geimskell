@@ -33,7 +33,7 @@ instr ListenForExplosions
   kk  OSClisten giHandle, "/explosion", "f", kf1
     if (kk == 0) goto ex
     printk 0,kf1
-    event "i", "expolosion", 0, 1
+    event "i", "Explosion", 0, 1
     kgoto nxtmsg
   ex:
 endin

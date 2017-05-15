@@ -11,16 +11,21 @@ import Sound.OSC.Transport.FD.UDP
 import Sound.OSC.Type
 import System.Process
 
-data SoundEffect = SoundShoot
+data SoundEffect = SoundShoot | SoundExplosion
 
 sendCommand server action =
   atomically $ writeTChan (serverCommandChannel server) action
 
-playSoundEffect server SoundShoot =
+playSoundEffect server eff =
   sendCommand server action
   where
     action trans = sendMessage trans $
-      message "/shoot" [Float 66.6]
+      message
+      ( case eff of
+          SoundShoot -> "/shoot"
+          SoundExplosion -> "/explosion"
+      )
+      [Float 66.6]
 
 withSoundServer action = do
   server <- createServer

@@ -74,6 +74,12 @@ gameplay pauseB = mdo
       playerT <*>
       projectilesT <*>
       enemiesT
+    explosionE =
+      fmap (const ()) .
+      filterE (>0) .
+      fmap snd .
+      rumors $
+      worldStateT
   worldStateB <-
     stepper
     initialWorldState $
@@ -84,7 +90,9 @@ gameplay pauseB = mdo
     playerB = wsPlayer <$> worldStateB
   let
     outputImage = renderWorldState <$> worldStateB
-    outputSounds = [SoundShoot] <$ shootE
+    outputSounds = unionWith (++)
+      ([SoundShoot] <$ shootE)
+      ([SoundExplosion] <$ explosionE)
     outputRequestsQuit = never
   return $ Output {..}
   where
