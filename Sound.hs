@@ -42,7 +42,7 @@ createServer = do
   serverCommandChannel <- newTChanIO
   serverProcessThreadId <-
     forkIO $ do
-      callCommand "csound -odac osc_receive.csd"
+      callCommand "csound -odac assets/audio/osc_receive.csd"
   serverUdpCon <- openUDP "127.0.0.1" 7770
   serverClientThreadId <-
     forkIO $ runServer serverCommandChannel serverUdpCon
