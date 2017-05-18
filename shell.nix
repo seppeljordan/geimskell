@@ -20,7 +20,7 @@ let
         src = ./.;
         isLibrary = false;
         isExecutable = true;
-        executableSystemDepends = [ csound_custom ];
+        executableSystemDepends = [ csound_custom tiled ];
         executableHaskellDepends = [
           base csound-expression deepseq lens linear mtl random
           reactive-banana sdl2 sdl2-compositor text transformers
