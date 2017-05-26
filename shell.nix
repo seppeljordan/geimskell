@@ -7,7 +7,7 @@ let
   f = { mkDerivation, base, csound-expression, deepseq, lens
       , linear, mtl, random, reactive-banana, sdl2, sdl2-compositor
       , stdenv, text, transformers, csound, QuickCheck, process, stm
-      , hosc, sdl2-image, tiled
+      , hosc, sdl2-image, tiled, htiled, array, containers
       }:
       let
         csound_custom = csound.overrideDerivation(old: {
@@ -24,7 +24,8 @@ let
         executableHaskellDepends = [
           base csound-expression deepseq lens linear mtl random
           reactive-banana sdl2 sdl2-compositor text transformers
-          QuickCheck process stm hosc sdl2-image
+          QuickCheck process stm hosc sdl2-image htiled array
+          containers
         ];
         license = stdenv.lib.licenses.gpl3;
       };

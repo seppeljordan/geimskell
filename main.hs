@@ -6,6 +6,7 @@
 
 import           Control.DeepSeq
 import           Control.Monad
+import           Data.Array
 import           Data.Monoid
 import           GHC.Generics
 import qualified Linear.V2 as L
@@ -21,11 +22,13 @@ import           Geometry
 import           Random
 import           Reactive
 import           Shoot
-import           Spaceship
 import           Sound
+import           Spaceship
+import           Stage
 
 gameplay pauseB = mdo
   keyboardE <- keyboardEvents
+  stage <- gameStage
   let
     delta = 16666 :: Int
   ticks <- generateTicks (pure delta)
@@ -88,8 +91,8 @@ gameplay pauseB = mdo
     enemiesB = wsEnemies <$> worldStateB
     projectilesB = wsProjectiles <$> worldStateB
     playerB = wsPlayer <$> worldStateB
-  let
-    outputImage = renderWorldState <$> worldStateB
+    worldObjectImages = renderWorldState <$> worldStateB
+    outputImage = pure (renderStage stage) <> worldObjectImages
     outputSounds = unionWith (++)
       ([SoundShoot] <$ shootE)
       ([SoundExplosion] <$ explosionE)
@@ -313,12 +316,21 @@ renderWorldState (WorldState { wsPlayer = player
     enemiesImage =
       mconcat . map (renderRectangle green) $
       enemies
-    background = mempty
     outputImage =
       translateR (L.V2 0.5 0.5) .
       flipC (L.V2 False True) $
-      ( background <>
-        enemiesImage <>
+      ( enemiesImage <>
         projectilesImage <>
         spaceshipGraphics
       )
+
+renderStage :: Stage -> Image
+renderStage stage =
+  mconcat . fmap makeImage . assocs $ (stageData stage)
+  where
+    tileWidth = 0.1
+    tileHeight = 0.1
+    makeImage (_,Nothing) = mempty
+    makeImage ((x,y), Just tex) =
+      translateR (L.V2 (fromIntegral x * tileWidth) (fromIntegral y * tileHeight)) $
+      sizedR (L.V2 tileWidth tileHeight) tex

@@ -1,4 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Reactive where
 
@@ -8,7 +9,9 @@ import Control.Monad.STM
 import Control.Monad.Trans
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.State as State
+import Data.Maybe
 import Data.Text
+import Foreign.C.Types
 import GHC.Word
 import Linear.V2 as L
 import Reactive.Banana as RB
@@ -19,6 +22,7 @@ import SDL.Compositor.ResIndependent
 import System.Random as Rand
 
 import Sound
+import Stage
 
 type Tick = ()
 
@@ -41,6 +45,8 @@ instance Monoid Output where
 
 data EngineInputs = EngineInputs { inputSdlEvents :: RB.Event EventPayload
                                  , inputTimeEvents :: RB.Event Word32
+                                 , inputWindowSizeEvents :: RB.Event (SDL.V2 CInt)
+                                 , inputStage :: Stage
                                  }
 
 -- | Take a game network and run it in a seprate window.
@@ -50,6 +56,7 @@ runNetwork :: Text -- ^ The title of the window to be created
 runNetwork title action = withSoundServer $ \ server -> do
   sdlHandler <- newAddHandler
   timeHandler <- newAddHandler
+  windowSizeHandler <- newAddHandler
   window <- createWindow title defaultWindow
   renderer <-
     createRenderer window (-1) defaultRenderer { rendererType = AcceleratedVSyncRenderer }
@@ -58,15 +65,15 @@ runNetwork title action = withSoundServer $ \ server -> do
     resolutionLinear = L.V2 800 600 :: L.V2 Int
   rendererLogicalSize renderer $= Just resolution
   requestsQuit <- newTVarIO False
+  inputStage <- fromMaybe (error "Failed to load Stage") <$> loadStage renderer
   gen <- newStdGen
   let
     network = do
-      sdlEvents <- fromAddHandler . fst $ sdlHandler
-      timeEvent <- fromAddHandler . fst $ timeHandler
+      inputSdlEvents <- fromAddHandler . fst $ sdlHandler
+      inputTimeEvents <- fromAddHandler . fst $ timeHandler
+      inputWindowSizeEvents <- fromAddHandler . fst $ windowSizeHandler
       output <- flip runReaderT
-        (EngineInputs { inputSdlEvents = sdlEvents
-                      , inputTimeEvents = timeEvent
-                      }) .
+        (EngineInputs {..}) .
         runGameNetwork .
         flip evalStateT gen .
         runRandomNetwork $
@@ -100,11 +107,14 @@ runNetwork title action = withSoundServer $ \ server -> do
               abort = sdlQuit || userQuit
             t1 <- ticks
             (snd timeHandler) (t1 - t0)
+            winSize <- SDL.get (windowSize window)
+            (snd windowSizeHandler) winSize
             if abort then return () else go t1
       go now
   program <- compile network
   actuate program
   eventLoop
+  destroyAssetCache (stageAssetCache inputStage)
 
 reactimate :: RB.Event (IO ()) -> Game ()
 reactimate = lift . lift . RB.reactimate
@@ -166,6 +176,9 @@ generateTicks deltaB = do
            else (Nothing, accu)
       ) <$> ((,) <$> deltaB <@> timeE)
     )
+
+gameStage :: Game Stage
+gameStage = lift . GameNetwork $ asks inputStage
 
 -- | @randomGenerator@ allows you to include "pseudo randomness" in
 -- your game description.  We implement randomness by forking random
