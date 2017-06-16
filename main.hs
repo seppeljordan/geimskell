@@ -333,4 +333,5 @@ renderStage stage =
     makeImage (_,Nothing) = mempty
     makeImage ((x,y), Just tex) =
       translateR (L.V2 (fromIntegral x * tileWidth) (fromIntegral y * tileHeight)) $
+      -- filledRectangleR (L.V2 tileWidth tileHeight) red
       sizedR (L.V2 tileWidth tileHeight) tex

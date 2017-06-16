@@ -5,6 +5,7 @@ module Stage where
 
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans
+import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Maybe
 import           Control.Monad.Trans.State
 import           Data.Array
@@ -63,6 +64,15 @@ tiledToStage renderer tiledMap = do
   where
     stageWidth = mapWidth tiledMap
     stageHeight = mapHeight tiledMap
+    tilesets = mapTilesets tiledMap
+    loadTileTexture tile = do
+      eitherTex <- loadTileFromTileset renderer tilesets tile
+      case eitherTex of
+        Left msg -> do
+          liftIO . putStrLn $ "Could not load texture for tile "++show tile
+          liftIO . putStrLn $ "Reason: "++msg
+          return Nothing
+        Right tex -> return $ Just tex
     generateStage = do
       tileLayer <- MaybeT . return $ getFirstTileLayer tiledMap
       let
@@ -74,7 +84,7 @@ tiledToStage renderer tiledMap = do
         mapM (\ (c,t) ->
                 maybe
                (return (c,Nothing))
-               (fmap (c,) . lift . loadTileFromTileset renderer (mapTilesets tiledMap))
+               (fmap (c,) . lift . loadTileTexture)
                t
              ) tiles
       return $ array ((0,0),(stageWidth-1,stageHeight-1)) textures
@@ -107,6 +117,7 @@ loadTextureThroughCache renderer path = do
   cache <- get
   case M.lookup path (acSpriteMaps cache) of
     Nothing -> do
+      liftIO . putStrLn $ "load texture from "++path
       tex <- liftIO $ SDL.loadTexture renderer path
       put
         cache
@@ -117,12 +128,18 @@ loadTextureThroughCache renderer path = do
 loadTileFromTileset :: SDL.Renderer
                     -> [Tileset]
                     -> Tile
-                    -> StateT AssetCache IO (Maybe SDL.Texture)
+                    -> StateT AssetCache IO (Either String SDL.Texture)
 loadTileFromTileset renderer tilesets
-    (Tile gid verticalFlip horizontalFlip diagonalFlip) = runMaybeT $ do
-  tileset <- MaybeT . return $ findTileset
-  image <- MaybeT . return $ tsImages tileset `safeIndex` 0
-  tkOffset <- MaybeT . return $ spriteOffset tileset
+    tile@(Tile gid verticalFlip horizontalFlip diagonalFlip) = runExceptT $ do
+  tileset <- ExceptT . return .
+    maybe (Left "Could not find valid tileset layer") Right $
+    findTileset
+  image <- ExceptT . return .
+    maybe (Left "Could not load tileset image from tileset") Right$
+    tsImages tileset `safeIndex` 0
+  tkOffset <- ExceptT . return .
+    maybe (Left "Could not get tileoffset") Right $
+    spriteOffset tileset
   let
     key = TextureKey {..}
     tkDims = ( fromIntegral . tsTileWidth $ tileset
@@ -134,8 +151,11 @@ loadTileFromTileset renderer tilesets
     findTileset =
         find
         (\ ts ->
-            tsInitialGid ts <= gid &&
-            gid <= tsInitialGid ts + (fromIntegral . length . tsImages $ ts))
+           let
+             tileAmountInTileset = fromIntegral . length . tsTileProperties $ ts
+           in
+             tsInitialGid ts <= gid &&
+             gid <= tsInitialGid ts + tileAmountInTileset)
         tilesets
     spriteOffset tileset = do
       image <- (tsImages tileset) `safeIndex` 0
@@ -154,6 +174,7 @@ loadTileTexture renderer key = do
   case M.lookup key $ acSprites cache of
     Just tex -> return tex
     Nothing -> do
+      liftIO . putStrLn $ "load tile "++show key
       tileTex <- liftIO $ SDL.createTexture
         renderer
         SDL.ARGB8888
@@ -173,11 +194,11 @@ loadTileTexture renderer key = do
       SDL.Rectangle
       (SDL.P
         (SDL.V2 (fst . tkOffset $ key) (snd . tkOffset $ key)))
-      (SDL.V2 (fst . tkDims $ key) (snd . tkOffset $ key))
+      (SDL.V2 (fst . tkDims $ key) (snd . tkDims $ key))
 
 safeIndex :: [a] -> Int -> Maybe a
 safeIndex (x:xs) n
   | n < 0 = Nothing
   | n == 0 = Just x
   | n > 0 = safeIndex xs (n - 1)
-safeIndex [] _ = Nothing
+safeIndex _ _ = Nothing
