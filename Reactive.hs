@@ -26,7 +26,8 @@ import Stage
 
 type Tick = ()
 
-type Image = ResIndependent CompositingNode SDL.Texture
+type ResIndependentImage = ResIndependent CompositingNode SDL.Texture
+type Image = CompositingNode SDL.Texture
 
 data Output =
   Output { outputImage :: Behavior Image
@@ -37,11 +38,15 @@ data Output =
 
 instance Monoid Output where
   mempty = Output mempty mempty mempty mempty
-  mappend a b = Output { outputImage = mappend (outputImage a) (outputImage b)
-                       , outputRenderTick = mappend (outputRenderTick a) (outputRenderTick b)
-                       , outputSounds = mappend (outputSounds a) (outputSounds b)
-                       , outputRequestsQuit = mappend (outputRequestsQuit a) (outputRequestsQuit b)
-                       }
+  mappend a b = Output
+    { outputImage = mappend (outputImage a) (outputImage b)
+    , outputRenderTick =
+        mappend (outputRenderTick a) (outputRenderTick b)
+    , outputSounds =
+        mappend (outputSounds a) (outputSounds b)
+    , outputRequestsQuit =
+        mappend (outputRequestsQuit a) (outputRequestsQuit b)
+    }
 
 data EngineInputs = EngineInputs { inputSdlEvents :: RB.Event EventPayload
                                  , inputTimeEvents :: RB.Event Word32
@@ -90,11 +95,8 @@ runNetwork title action = withSoundServer $ \ server -> do
         requestsQuitE
     doRendering image = do
       clear renderer
-      runRenderer renderer absoluteImage
+      runRenderer renderer (image :: Image)
       present renderer
-      where
-        absoluteImage :: CompositingNode SDL.Texture
-        absoluteImage = fromRelativeCompositor (fromIntegral <$> resolutionLinear) image
     fireIfNotQuit (SDL.Event { eventPayload = ev })
       | ev == QuitEvent = return True
       | otherwise = (snd sdlHandler) ev >> return False

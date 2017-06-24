@@ -17,6 +17,7 @@ import           SDL.Compositor hiding
 import           SDL.Compositor.ResIndependent
 import           System.Random
 
+import           Camera
 import           Enemy
 import           Geometry
 import           Random
@@ -66,14 +67,19 @@ gameplay pauseB = mdo
       ticks
     playerT =
       makeSpaceship
-      ( fmap
-        (vectorScale 0.016 . v2ToVector)
+      ( apply
+        ((\ speed d -> vectorAdd d (makeVector speed 0)) <$>
+         (camSpeed <$> cameraB)
+        ) .
+        fmap (vectorScale 0.016 . v2ToVector) $
         (facts directionT <@ ticks)
       )
       playerB
+    cameraT = makeCamera ticks cameraB
     outputRenderTick = () <$ ticks
     worldStateT =
       combineToWorldState <$>
+      cameraT <*>
       playerT <*>
       projectilesT <*>
       enemiesT
@@ -91,8 +97,14 @@ gameplay pauseB = mdo
     enemiesB = wsEnemies <$> worldStateB
     projectilesB = wsProjectiles <$> worldStateB
     playerB = wsPlayer <$> worldStateB
-    worldObjectImages = renderWorldState <$> worldStateB
-    outputImage = pure (renderStage stage) <> worldObjectImages
+    cameraB = wsCamera <$> worldStateB
+    worldObjectImages = renderWorldState <$> (camPosition <$> cameraB) <*> worldStateB
+    stageImage = renderStage <$>
+                 (camPosition <$> cameraB) <*>
+                 pure stage
+    outputImage =
+      stageImage <>
+      (fromRelativeCompositor (L.V2 768 600) <$> worldObjectImages)
     outputSounds = unionWith (++)
       ([SoundShoot] <$ shootE)
       ([SoundExplosion] <$ explosionE)
@@ -103,6 +115,9 @@ gameplay pauseB = mdo
       WorldState { wsPlayer = initialSpaceship
                  , wsProjectiles = []
                  , wsEnemies = []
+                 , wsCamera = Camera { camSpeed = 0.001
+                                     , camPosition = 0
+                                     }
                  }
     initialSpaceship =
       makeRectangle
@@ -148,8 +163,8 @@ menu = mdo
       pure ( makeRectangle
              (makeVector (-0.4) (-0.4))
              (makeVector (0.4) (-0.1)))
-    oImage =
-      translateR (L.V2 0.5 0.5) <$> startImage <> quitImage
+    oImage = fromRelativeCompositor (L.V2 768 600) <$>
+      ( translateR (L.V2 0.5 0.5) <$> startImage <> quitImage )
     oSounds = never
     oRenderTick = ticks
     exitButtonE =
@@ -245,7 +260,7 @@ instance Traversable Box4 where
   traverse fun (Box4 a b c d) =
     Box4 <$> fun a <*> fun b <*> fun c <*> fun d
 
-renderRectangle :: Color -> Rectangle -> Image
+renderRectangle :: Color -> Rectangle -> ResIndependentImage
 renderRectangle col rect =
   translateR offset (filledRectangleR (L.V2 width height) col)
   where
@@ -257,7 +272,8 @@ renderRectangle col rect =
       (avg (pointY . rectangleA $ rect) (pointY . rectangleB $ rect))
     avg a b = (a+b)/2
 
-translateRVector :: Vector -> (Image -> Image)
+translateRVector :: Vector
+                 -> (ResIndependentImage -> ResIndependentImage)
 translateRVector = translateR . vectorToV2
 
 vectorToV2 v = L.V2 x y
@@ -282,15 +298,17 @@ type Player = Rectangle
 data WorldState = WorldState { wsPlayer :: Player
                              , wsProjectiles :: [Projectile]
                              , wsEnemies :: [Enemy]
+                             , wsCamera :: Camera
                              }
 
-combineToWorldState player projectiles enemies =
+combineToWorldState camera player projectiles enemies =
   ( WorldState
     { wsPlayer = player
     , wsProjectiles =
       filter (not . outOfBounds . projectileRect ) newProjectiles
     , wsEnemies =
       filter (not . outOfBounds) newEnemies
+    , wsCamera = camera
     }
   , length enemies - length newEnemies
   )
@@ -304,7 +322,8 @@ combineToWorldState player projectiles enemies =
         y = pointY p
         p = rectangleMidpoint rect
 
-renderWorldState (WorldState { wsPlayer = player
+renderWorldState xPosition
+                 (WorldState { wsPlayer = player
                              , wsEnemies = enemies
                              , wsProjectiles = projectiles }) =
   outputImage
@@ -317,6 +336,7 @@ renderWorldState (WorldState { wsPlayer = player
       mconcat . map (renderRectangle green) $
       enemies
     outputImage =
+      translateR (L.V2 (-xPosition) 0) .
       translateR (L.V2 0.5 0.5) .
       flipC (L.V2 False True) $
       ( enemiesImage <>
@@ -324,23 +344,23 @@ renderWorldState (WorldState { wsPlayer = player
         spaceshipGraphics
       )
 
-renderStage :: Stage -> Image
-renderStage stage =
+renderStage :: Number -> Stage -> Image
+renderStage xPosition stage =
   mconcat . fmap makeImage . filter onScreen . assocs $ (stageData stage)
   where
-    xPosition = 0.0
-    tileWidth = 1/24.0
-    tileHeight = 1/24.0
-    epsilon = 0.0001
+    xPositionAbsolute = round $ xPosition * 600
+    tileWidth = 24 :: Int
+    tileHeight = 24 :: Int
+    relativeWidth = 1/fromIntegral tileWidth :: Number
     makeImage (_,Nothing) = mempty
     makeImage ((x,y), Just tex) =
-      ( translateR
+      ( translateA
         ( L.V2
-          (fromIntegral x * tileWidth)
-          (fromIntegral y * tileHeight)
+          (x * tileWidth - xPositionAbsolute)
+          (y * tileHeight + 24)
         )
       ) $
-      sizedR (L.V2 (tileWidth + epsilon) (tileHeight + epsilon)) tex
+      sizedA (L.V2 tileWidth tileHeight) tex
     onScreen ((x,_),_) =
-      fromIntegral x * tileWidth > xPosition - 2 &&
-      fromIntegral x * tileWidth < xPosition + 2
+      fromIntegral x * relativeWidth > xPosition - 2 &&
+      fromIntegral x * relativeWidth < xPosition + 2

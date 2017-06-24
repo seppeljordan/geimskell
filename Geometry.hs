@@ -4,6 +4,7 @@ module Geometry
   ( Vector, makeVector, Rectangle, makeRectangle, Number
   , rectangleA, rectangleB, vectorMidpoint, translateRectangle
   , rectangleMidpoint, pointX, pointY, vectorScale, rectanglesOverlap
+  , vectorAdd
   )
 
 where
