@@ -326,12 +326,21 @@ renderWorldState (WorldState { wsPlayer = player
 
 renderStage :: Stage -> Image
 renderStage stage =
-  mconcat . fmap makeImage . assocs $ (stageData stage)
+  mconcat . fmap makeImage . filter onScreen . assocs $ (stageData stage)
   where
-    tileWidth = 0.1
-    tileHeight = 0.1
+    xPosition = 0.0
+    tileWidth = 1/24.0
+    tileHeight = 1/24.0
+    epsilon = 0.0001
     makeImage (_,Nothing) = mempty
     makeImage ((x,y), Just tex) =
-      translateR (L.V2 (fromIntegral x * tileWidth) (fromIntegral y * tileHeight)) $
-      -- filledRectangleR (L.V2 tileWidth tileHeight) red
-      sizedR (L.V2 tileWidth tileHeight) tex
+      ( translateR
+        ( L.V2
+          (fromIntegral x * tileWidth)
+          (fromIntegral y * tileHeight)
+        )
+      ) $
+      sizedR (L.V2 (tileWidth + epsilon) (tileHeight + epsilon)) tex
+    onScreen ((x,_),_) =
+      fromIntegral x * tileWidth > xPosition - 2 &&
+      fromIntegral x * tileWidth < xPosition + 2
