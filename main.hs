@@ -349,15 +349,15 @@ renderStage xPosition stage =
   mconcat . fmap makeImage . filter onScreen . assocs $ (stageData stage)
   where
     xPositionAbsolute = round $ xPosition * 600
-    tileWidth = 24 :: Int
-    tileHeight = 24 :: Int
+    tileWidth = 32 :: Int
+    tileHeight = 32 :: Int
     relativeWidth = 1/fromIntegral tileWidth :: Number
     makeImage (_,Nothing) = mempty
     makeImage ((x,y), Just tex) =
       ( translateA
         ( L.V2
           (x * tileWidth - xPositionAbsolute)
-          (y * tileHeight + 24)
+          (y * tileHeight)
         )
       ) $
       sizedA (L.V2 tileWidth tileHeight) tex
