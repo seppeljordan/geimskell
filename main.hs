@@ -4,6 +4,8 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveGeneric #-}
 
+import Debug.Trace
+
 import           Control.DeepSeq
 import           Control.Monad
 import           Data.Array
@@ -11,7 +13,7 @@ import           Data.Monoid
 import           GHC.Generics
 import qualified Linear.V2 as L
 import           Reactive.Banana as RB
-import           SDL hiding (Rectangle, Vector)
+import           SDL hiding (Rectangle, Vector, trace)
 import           SDL.Compositor hiding
   (clear, present, createTexture, rendererRenderTarget)
 import           SDL.Compositor.ResIndependent
@@ -345,10 +347,10 @@ renderWorldState xPosition
       )
 
 renderStage :: Number -> Stage -> Image
-renderStage xPosition stage =
+renderStage camPosition stage = trace (show relativeWidth) $
   mconcat . fmap makeImage . filter onScreen . assocs $ (stageData stage)
   where
-    xPositionAbsolute = round $ xPosition * 600
+    camPositionAbsolute = round $ camPosition * 600
     tileWidth = 32 :: Int
     tileHeight = 32 :: Int
     relativeWidth = 1/fromIntegral tileWidth :: Number
@@ -356,11 +358,15 @@ renderStage xPosition stage =
     makeImage ((x,y), Just tex) =
       ( translateA
         ( L.V2
-          (x * tileWidth - xPositionAbsolute)
+          (x * tileWidth - camPositionAbsolute)
           (y * tileHeight)
         )
       ) $
       sizedA (L.V2 tileWidth tileHeight) tex
-    onScreen ((x,_),_) =
-      fromIntegral x * relativeWidth > xPosition - 2 &&
-      fromIntegral x * relativeWidth < xPosition + 2
+    onScreen ((gridXPos,_),_) =
+      -- gridXPos is just the position in the tilegrid and has nothing
+      -- to do with the actual position on the screen
+      x * relativeWidth > camPosition - 2 &&
+      x * relativeWidth < camPosition + 2
+      where
+        x = fromIntegral gridXPos * relativeWidth
