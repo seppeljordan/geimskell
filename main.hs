@@ -56,7 +56,7 @@ gameplay pauseB = mdo
             else (Nothing, cooldownTimer)
       ) <$>
       ((,) <$> shootCooldown <*> shootTriggerB <@ ticks))
-  enemiesT <- makeEnemies enemiesB spawnTicks ticks
+  enemiesT <- makeEnemies (camPosition <$> cameraB) enemiesB spawnTicks ticks
   let
     projectilesT =
       makeShoot
@@ -318,7 +318,7 @@ combineToWorldState camera player projectiles enemies =
     outOfBounds rect =
       x <= (-5) || x > 5 || y <= (-5) || y > 5
       where
-        x = pointX p
+        x = pointX p - camPosition camera
         y = pointY p
         p = rectangleMidpoint rect
 
