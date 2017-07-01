@@ -3,6 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE ApplicativeDo #-}
 
 import           Control.DeepSeq
 import           Control.Monad
@@ -92,8 +93,9 @@ gameplay pauseB = mdo
   worldStateB <-
     stepper
     initialWorldState $
-    (whenE (not <$> pauseB) $ fst <$> rumors worldStateT)
+    (whenE ((\ pause gameOver -> not pause && not gameOver) <$> pauseB <*> gameOverB) $ fst <$> rumors worldStateT)
   let
+    gameOverB = worldStateGameOver <$> worldStateB
     enemiesB = wsEnemies <$> worldStateB
     projectilesB = wsProjectiles <$> worldStateB
     playerB = wsPlayer <$> worldStateB
@@ -303,16 +305,20 @@ data WorldState = WorldState { wsPlayer :: PlayerShip
 
 combineToWorldState camera player projectiles enemies =
   ( WorldState
-    { wsPlayer = player
+    { wsPlayer = handleHits player
     , wsProjectiles =
       filter (not . outOfBounds . projectileRect ) newProjectiles
     , wsEnemies =
-      filter (not . outOfBounds) newEnemies
+      filter (not . collisionWithPlayer) . filter (not . outOfBounds) $ newEnemies
     , wsCamera = camera
     }
   , length enemies - length newEnemies
   )
   where
+    collisionWithPlayer r = rectanglesOverlap r (playerShipRectangle player)
+    handleHits p
+      | not . null $ filter collisionWithPlayer enemies = reducePlayerHealth p
+      | otherwise = p
     (newProjectiles, newEnemies) =
       handleCollisions projectiles enemies
     outOfBounds rect =
@@ -343,6 +349,9 @@ renderWorldState xPosition
         projectilesImage <>
         spaceshipGraphics
       )
+
+worldStateGameOver worldstate =
+  (== HealthEmpty) . playerHealth . wsPlayer $ worldstate
 
 renderStage :: Number -> Stage -> Image
 renderStage camPosition stage =
