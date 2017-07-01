@@ -7,13 +7,24 @@ import Reactive.Banana
 import Geometry
 import Reactive
 
+data Health = HealthEmpty | HealthOne | HealthTwo | HealthThree
+  deriving (Read,Show,Eq,Ord,Enum)
 
-makeSpaceship :: Event Vector -> Behavior Rectangle -> Tidings Rectangle
-makeSpaceship v rectB =
-  tidings (translateRectangle <$> rectB <@> v) rectB
+data PlayerShip = PlayerShip
+  { psArea :: Rectangle
+  , psHealth :: Health
+  }
+  deriving (Show,Read,Eq)
 
-spaceshipPoint :: Rectangle -> Vector
-spaceshipPoint rect = vectorMidpoint v1 v2
-  where
-    v1 = rectangleA rect
-    v2 = rectangleB rect
+playerShipRectangle = psArea
+
+translatePlayerShip :: Vector -> PlayerShip -> PlayerShip
+translatePlayerShip v ship@(PlayerShip { psArea = oldArea }) =
+  ship { psArea = translateRectangle oldArea v}
+
+makeSpaceship :: Event Vector -> Behavior PlayerShip -> Tidings PlayerShip
+makeSpaceship v shipB =
+  tidings (flip translatePlayerShip <$> shipB <@> v) shipB
+
+spaceshipPoint :: PlayerShip -> Vector
+spaceshipPoint = rectangleMidpoint . psArea

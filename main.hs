@@ -60,7 +60,7 @@ gameplay pauseB = mdo
   let
     projectilesT =
       makeShoot
-      (rectangleMidpoint <$> playerB)
+      (spaceshipPoint <$> playerB)
       (pure (0.05,0.05))
       shootE
       projectilesB
@@ -120,9 +120,11 @@ gameplay pauseB = mdo
                                      }
                  }
     initialSpaceship =
-      makeRectangle
-      (makeVector (-0.1) (-0.1))
-      (makeVector 0.1 0.1)
+      PlayerShip { psArea = makeRectangle
+                   (makeVector (-0.1) (-0.1))
+                   (makeVector 0.1 0.1)
+                 , psHealth = HealthThree
+                 }
 
 data Menu = MenuStart | MenuQuit
   deriving Eq
@@ -293,9 +295,7 @@ handleCollisions projectiles enemies =
     isProjectileCollision r =
       or . map (rectanglesOverlap r . projectileRect) $ projectiles
 
-type Player = Rectangle
-
-data WorldState = WorldState { wsPlayer :: Player
+data WorldState = WorldState { wsPlayer :: PlayerShip
                              , wsProjectiles :: [Projectile]
                              , wsEnemies :: [Enemy]
                              , wsCamera :: Camera
@@ -328,7 +328,7 @@ renderWorldState xPosition
                              , wsProjectiles = projectiles }) =
   outputImage
   where
-    spaceshipGraphics = renderRectangle blue player
+    spaceshipGraphics = renderRectangle blue $ playerShipRectangle player
     projectilesImage =
       mconcat . map (renderRectangle red . projectileRect) $
       projectiles
