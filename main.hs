@@ -4,8 +4,6 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-import Debug.Trace
-
 import           Control.DeepSeq
 import           Control.Monad
 import           Data.Array
@@ -347,7 +345,7 @@ renderWorldState xPosition
       )
 
 renderStage :: Number -> Stage -> Image
-renderStage camPosition stage = trace (show relativeWidth) $
+renderStage camPosition stage =
   mconcat . fmap makeImage . filter onScreen . assocs $ (stageData stage)
   where
     camPositionAbsolute = round $ camPosition * 600
