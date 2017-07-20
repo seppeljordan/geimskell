@@ -11,6 +11,8 @@ import Sound.OSC.Transport.FD.UDP
 import Sound.OSC.Type
 import System.Process
 
+import Paths_geimskell
+
 data SoundEffect = SoundShoot | SoundExplosion
 
 sendCommand server action =
@@ -42,7 +44,10 @@ createServer = do
   serverCommandChannel <- newTChanIO
   serverProcessThreadId <-
     forkIO $ do
-      callCommand "csound -odac assets/audio/osc_receive.csd"
+      soundAssetFile <-
+        getDataFileName "assets/audio/osc_receive.csd"
+      callCommand $
+        "csound -odac " ++ soundAssetFile
   serverUdpCon <- openUDP "127.0.0.1" 7770
   serverClientThreadId <-
     forkIO $ runServer serverCommandChannel serverUdpCon

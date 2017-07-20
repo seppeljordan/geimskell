@@ -11,6 +11,11 @@ maintainer:          sebastian.jordan.mail@googlemail.com
 build-type:          Simple
 extra-source-files:  ChangeLog.md
 cabal-version:       >=1.10
+data-files:
+           assets/audio/*
+         , assets/graphics/*
+         , assets/graphics/stage/*
+         , assets/stages/*
 
 executable geimskell
   main-is:             main.hs
@@ -48,3 +53,4 @@ test-suite unittests
                , QuickCheck
   default-language: Haskell2010
   main-is: UnitTests.hs
+

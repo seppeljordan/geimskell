@@ -18,6 +18,8 @@ import qualified SDL
 import qualified SDL.Image as SDL
 import           System.Directory
 
+import           Paths_geimskell
+
 data Stage = Stage { stageWidth :: Int
                    , stageHeight :: Int
                    , stageData :: Array (Int,Int) (Maybe SDL.Texture)
@@ -47,9 +49,10 @@ data TextureKey = TextureKey { tkPath :: FilePath
 type TextureCache = M.Map TextureKey SDL.Texture
 
 loadStage :: SDL.Renderer -> IO (Maybe Stage)
-loadStage renderer =
-  withCurrentDirectory "assets/stages" . runMaybeT $
-  tiledToStage renderer =<< liftIO (loadMapFile stagePath)
+loadStage renderer = do
+  assetDir <- getDataFileName "assets/stages"
+  withCurrentDirectory assetDir . runMaybeT $
+    tiledToStage renderer =<< liftIO (loadMapFile stagePath)
   where
     stagePath = "stage.tmx"
 
