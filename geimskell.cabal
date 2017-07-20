@@ -12,10 +12,11 @@ build-type:          Simple
 extra-source-files:  ChangeLog.md
 cabal-version:       >=1.10
 data-files:
-           assets/audio/*
-         , assets/graphics/*
-         , assets/graphics/stage/*
-         , assets/stages/*
+           assets/audio/*.udo
+         , assets/audio/*.csd
+         , assets/graphics/*.png
+         , assets/graphics/stage/*.bmp
+         , assets/stages/*.tmx
 
 executable geimskell
   main-is:             main.hs
