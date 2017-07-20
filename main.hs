@@ -28,7 +28,7 @@ import           Sound
 import           Spaceship
 import           Stage
 
-gameplay pauseB = mdo
+gameplay pauseB restartE = mdo
   keyboardE <- keyboardEvents
   stage <- gameStage
   let
@@ -93,8 +93,14 @@ gameplay pauseB = mdo
   worldStateB <-
     stepper
     initialWorldState $
-    (whenE ((\ pause gameOver -> not pause && not gameOver) <$> pauseB <*> gameOverB) $ fst <$> rumors worldStateT)
+    unionWith (flip const)
+    (whenE (not <$> gameStopB) $ fst <$> rumors worldStateT)
+    (initialWorldState <$ restartE)
   let
+    gameStopB =
+      (||) <$>
+      pauseB <*>
+      gameOverB
     gameOverB = worldStateGameOver <$> worldStateB
     enemiesB = wsEnemies <$> worldStateB
     projectilesB = wsProjectiles <$> worldStateB
@@ -128,7 +134,7 @@ gameplay pauseB = mdo
                  , psHealth = HealthThree
                  }
 
-data Menu = MenuStart | MenuQuit
+data Menu = MenuStart | MenuRestart | MenuQuit
   deriving Eq
 
 menu = mdo
@@ -146,29 +152,47 @@ menu = mdo
       buttonPressEvent ScancodeReturn <$> keyboardE
     escapeE = void . filterE id . filterJust $
       buttonPressEvent ScancodeEscape <$> keyboardE
-  menuSelection <- stepper MenuStart . whenE pauseB $
-    unionWith const
-    (MenuStart <$ arrowUpE)
-    (MenuQuit <$ arrowDownE)
+  menuSelection <- accumB MenuStart . whenE pauseB $
+    let
+      selectionUp MenuStart = MenuStart
+      selectionUp MenuRestart = MenuStart
+      selectionUp MenuQuit = MenuRestart
+      selectionDown MenuStart = MenuRestart
+      selectionDown MenuRestart = MenuQuit
+      selectionDown MenuQuit = MenuQuit
+    in
+      unionWith (.)
+      (selectionUp <$ arrowUpE)
+      (selectionDown <$ arrowDownE)
   let
     startImage = renderRectangle <$>
       ((\m -> case m of
            MenuStart -> red
-           MenuQuit -> blue
+           _ -> blue
+       ) <$> menuSelection) <*>
+      pure (makeRectangle
+            (makeVector (-0.4) 0.15)
+            (makeVector (0.4) 0.4))
+    restartImage = renderRectangle <$>
+      ((\m -> case m of
+           MenuRestart -> red
+           _ -> blue
        ) <$> menuSelection) <*>
       pure (makeRectangle
             (makeVector (-0.4) 0.1)
-            (makeVector (0.4) 0.4))
+            (makeVector (0.4) (-0.1)))
     quitImage = renderRectangle <$>
       ((\m -> case m of
-           MenuStart -> blue
            MenuQuit -> red
+           _ -> blue
        ) <$> menuSelection) <*>
       pure ( makeRectangle
              (makeVector (-0.4) (-0.4))
-             (makeVector (0.4) (-0.1)))
+             (makeVector (0.4) (-0.15)))
     oImage = fromRelativeCompositor (L.V2 768 600) <$>
-      ( translateR (L.V2 0.5 0.5) <$> startImage <> quitImage )
+      ( translateR (L.V2 0.5 0.5) . flipC (L.V2 False True) <$>
+        startImage <> restartImage <> quitImage
+      )
     oSounds = never
     oRenderTick = ticks
     exitButtonE =
@@ -177,9 +201,12 @@ menu = mdo
     startButtonE =
       void . whenE pauseB . filterE (== MenuStart) $
       menuSelection <@ enterE
+    restartSelectionE =
+      void . whenE pauseB . filterE (== MenuRestart) $
+      menuSelection <@ enterE
     oRequestsQuit = exitButtonE
-  pauseB <- accumB True $ not <$ unionsWith const [escapeE,startButtonE]
-  gameOutput <- gameplay pauseB
+  pauseB <- accumB True $ not <$ unionsWith const [escapeE,startButtonE,restartSelectionE]
+  gameOutput <- gameplay pauseB restartSelectionE
   let
     menuOutput = Output
       { outputSounds = oSounds <> outputSounds gameOutput
