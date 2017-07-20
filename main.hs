@@ -403,4 +403,4 @@ renderStage camPosition stage =
       x * relativeWidth > camPosition - 2 &&
       x * relativeWidth < camPosition + 2
       where
-        x = fromIntegral gridXPos * relativeWidth
+        x = fromIntegral gridXPos
