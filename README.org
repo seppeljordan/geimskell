@@ -1,0 +1,4 @@
+#+author: Sebastian Jordan
+#+title: geimskell
+* Introduction to geimskell
+  geimskell will be a video game one day.
