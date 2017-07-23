@@ -6,8 +6,8 @@ mkDerivation {
   version = "1.2.0.0";
   src = fetchgit {
     url = "https://github.com/seppeljordan/lrucache.git";
-    sha256 = "17yg3x7cwkgb70mg9ffqzlm5g6p9jsq1ypr31bcnkan09nncx4lf";
-    rev = "ad43bf21ec10e77abf43e59890d4cbaf3a684592";
+    sha256 = "1ypcajyq9sas57l0gpcdd26j07js8nmjh7x6x70rm6n0b4bhvi73";
+    rev = "84fad72009078a67bd6942a6a7e0ffa80959659e";
   };
   libraryHaskellDepends = [ base containers contravariant ];
   testHaskellDepends = [ base Cabal hspec hspec-core QuickCheck ];
