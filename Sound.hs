@@ -15,8 +15,10 @@ import Paths_geimskell
 
 data SoundEffect = SoundShoot | SoundExplosion
 
-sendCommand server action =
-  atomically $ writeTChan (serverCommandChannel server) action
+sendCommand EmptySoundServer _ = return ()
+sendCommand (SoundServer { serverCommandChannel = commandChannel }
+            ) action =
+  atomically $ writeTChan commandChannel action
 
 playSoundEffect server eff =
   sendCommand server action
@@ -29,6 +31,8 @@ playSoundEffect server eff =
       )
       [Float 66.6]
 
+withEmptySoundServer action = action EmptySoundServer
+
 withSoundServer action = do
   server <- createServer
   action server `finally` destroyServer server
@@ -38,7 +42,8 @@ data SoundServer =
               , serverProcessThreadId :: ThreadId
               , serverClientThreadId :: ThreadId
               , serverUdpCon :: UDP
-              }
+              } |
+  EmptySoundServer
 
 createServer = do
   serverCommandChannel <- newTChanIO
@@ -53,10 +58,13 @@ createServer = do
     forkIO $ runServer serverCommandChannel serverUdpCon
   return SoundServer {..}
 
-destroyServer s = do
-  mapM_ (killThread . (flip ($) s))
-    [serverProcessThreadId, serverClientThreadId]
-  close $ serverUdpCon s
+destroyServer s@(SoundServer { serverUdpCon = udpCon
+                             , serverProcessThreadId = processThread
+                             , serverClientThreadId = clientThread}
+                ) = do
+  mapM_ killThread [processThread, clientThread]
+  close udpCon
+desroyServer EmptySoundServer = return ()
 
 runServer chan udp =
   go

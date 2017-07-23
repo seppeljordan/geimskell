@@ -4,6 +4,7 @@
 module Reactive where
 
 import Control.Concurrent.STM.TVar
+import Control.DeepSeq
 import Control.Monad.Fix
 import Control.Monad.STM
 import Control.Monad.Trans
@@ -23,6 +24,7 @@ import System.Random as Rand
 
 import Sound
 import Stage
+import TileSet
 
 type Tick = ()
 
@@ -67,11 +69,10 @@ runNetwork title action = withSoundServer $ \ server -> do
     createRenderer window (-1) defaultRenderer { rendererType = AcceleratedVSyncRenderer }
   let
     resolution = V2 768 600
-    resolutionLinear = case resolution of
-                         V2 w h -> fromIntegral <$> L.V2 w h :: L.V2 Int
   rendererLogicalSize renderer $= Just resolution
   requestsQuit <- newTVarIO False
   inputStage <- fromMaybe (error "Failed to load Stage") <$> loadStage renderer
+  putStrLn $ rnf inputStage `seq` "Stage Loaded"
   gen <- newStdGen
   let
     network = do

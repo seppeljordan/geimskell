@@ -27,6 +27,7 @@ import           Shoot
 import           Sound
 import           Spaceship
 import           Stage
+import           TileSet
 
 gameplay pauseB restartE = mdo
   keyboardE <- keyboardEvents
@@ -389,14 +390,14 @@ renderStage camPosition stage =
     tileHeight = 32 :: Int
     relativeWidth = 1/fromIntegral tileWidth :: Number
     makeImage (_,Nothing) = mempty
-    makeImage ((x,y), Just tex) =
+    makeImage ((x,y), Just tile) =
       ( translateA
         ( L.V2
           (x * tileWidth - camPositionAbsolute)
           (y * tileHeight)
         )
       ) $
-      sizedA (L.V2 tileWidth tileHeight) tex
+      sizedA (L.V2 tileWidth tileHeight) (tileTexture tile)
     onScreen ((gridXPos,_),_) =
       -- gridXPos is just the position in the tilegrid and has nothing
       -- to do with the actual position on the screen

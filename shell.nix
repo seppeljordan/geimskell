@@ -7,7 +7,8 @@ let
   f = { mkDerivation, base, csound-expression, deepseq, lens
       , linear, mtl, random, reactive-banana, sdl2, sdl2-compositor
       , stdenv, text, transformers, csound, QuickCheck, process, stm
-      , hosc, sdl2-image, tiled, htiled, array, containers, prelude-safeenum
+      , hosc, sdl2-image, tiled, htiled, array, containers
+      , prelude-safeenum
       }:
       let
         csound_custom = csound.overrideDerivation(old: {
@@ -30,10 +31,12 @@ let
         license = stdenv.lib.licenses.gpl3;
       };
 
-  haskellPackages = if compiler == "default"
-                       then pkgs.haskellPackages
-                       else pkgs.haskell.packages.${compiler};
-
+  haskellPackagesOrig = if compiler == "default"
+                        then pkgs.haskellPackages
+                         else pkgs.haskell.packages.${compiler};
+  haskellPackages = haskellPackagesOrig.override {
+    overrides = import nix/overrides.nix;
+  };
   drv = haskellPackages.callPackage f {};
 
 in
