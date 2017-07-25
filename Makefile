@@ -1,22 +1,27 @@
 GHC_OPTIONS=--ghc-options=\"-Wall -threaded -fno-warn-missing-signatures\"
+NIX_PATH=nixpkgs=https://github.com/NixOS/nixpkgs/archive/f338e99039ed4c85b6eae4c5c0e046c3115ffee5.tar.gz
+NIX_SHELL=nix-shell nix/release.nix -A env
 
 run:
-	nix-shell --command "exec cabal run $(GHC_OPTIONS)"
+	$(NIX_SHELL) --command "exec cabal run"
 
 build:
-	nix-shell --command "exec cabal build $(GHC_OPTIONS)"
+	$(NIX_SHELL) --command "exec cabal build"
+
+release:
+	nix-build nix/release.nix -o result
 
 shell:
-	nix-shell
+	$(NIX_SHELL)
 
 configure:
-	nix-shell --command "exec cabal configure"
+	$(NIX_SHELL) --command "exec cabal configure"
 
 haddock:
-	nix-shell --command "exec cabal haddock --executable"
+	$(NIX_SHELL) --command "exec cabal haddock --executable"
 
 test:
-	nix-shell --command "exec cabal test"
+	$(NIX_SHELL) --command "exec cabal test"
 
 update-htiled:
 	cabal2nix https://github.com/seppeljordan/htiled.git > \
@@ -32,4 +37,4 @@ update-lrucache:
 
 update-deps: update-htiled update-sdl2-compositor update-lrucache
 
-.PHONY: run build shell configure haddock test sound-server
+.PHONY: run build shell configure haddock test

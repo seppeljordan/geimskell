@@ -8,7 +8,7 @@ let
       , linear, mtl, random, reactive-banana, sdl2, sdl2-compositor
       , stdenv, text, transformers, csound, QuickCheck, process, stm
       , hosc, sdl2-image, tiled, htiled, array, containers
-      , prelude-safeenum
+      , prelude-safeenum, hspec
       }:
       let
         csound_custom = csound.overrideDerivation(old: {
@@ -25,9 +25,10 @@ let
         executableHaskellDepends = [
           base csound-expression deepseq lens linear mtl random
           reactive-banana sdl2 sdl2-compositor text transformers
-          QuickCheck process stm hosc sdl2-image htiled array
+          process stm hosc sdl2-image htiled array
           containers prelude-safeenum
         ];
+        testHaskellDepends = [ base hspec QuickCheck ];
         license = stdenv.lib.licenses.gpl3;
       };
 

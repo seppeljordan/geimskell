@@ -1,6 +1,4 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE StandaloneDeriving #-}
 module TileSet where
 
 import           Control.DeepSeq
@@ -9,14 +7,11 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.State
-import           Data.List
 import qualified Data.Map.Lazy as MapL
 import qualified Data.Map.Strict as MapS
 import           Data.Maybe
 import           Data.StateVar hiding (get)
 import           Data.Tiled
-import           Data.Word
-import           GHC.Generics
 import qualified SDL
 import           SDL.Image as SDL
 
@@ -105,35 +100,36 @@ data GameTile = GameTile { tileSolid :: Bool
                          }
 
 instance NFData GameTile where
-  rnf tile = tileSolid tile `seq` tile `seq` ()
+  rnf t = tileSolid t `seq` t `seq` ()
 
 tileLookupMap renderer =
-  foldM addTileSetToMap MapL.empty . mapTilesets . traceMap mapTilesets
+  foldM addTileSetToMap MapL.empty .
+  mapTilesets .
+  traceMap (length . mapTilesets)
   where
     addTileSetToMap tilemap tileset =
       foldM
       (addTileToMap $ tileset)
       tilemap
       (tsTiles tileset)
-    addTileToMap tileset tilemap tile = do
+    addTileToMap tileset tilemap t = do
       image <- liftMaybe
         ("Tileset "++tsName tileset++" does not contain an image") $
         listToMaybe $ tsImages tileset
       let
-        gid = fromIntegral $ tsInitialGid tileset + tileId tile
-        localId = fromIntegral $ tileId tile
-        columns = (iWidth image - tsMargin tileset + tsSpacing tileset)
-                  `div` iWidth image + tsSpacing tileset
+        gid = fromIntegral $ tsInitialGid tileset + tileId t
+        localId = fromIntegral $ tileId t
+        columns = tilesetColumns tileset
         xOffset =
           tsMargin tileset +
-          (localId `mod` columns) *
+          (localId `mod` traceMap id columns) *
           (tsSpacing tileset + tsTileWidth tileset)
         yOffset = tsMargin tileset +
                   (localId `div` columns) *
                   (tsSpacing tileset + tsTileHeight tileset)
         texturekey = TextureKey { tkPath = iSource image
                                 , tkOffset = (xOffset, yOffset)
-                                , tkDims = (iWidth image, iHeight image)
+                                , tkDims = (tsTileWidth tileset, tsTileHeight tileset)
                                 }
       tex <- loadTextureKey renderer texturekey
       let
@@ -141,6 +137,13 @@ tileLookupMap renderer =
                             , tileSolid = False
                             }
       return $ MapL.insert gid gametile tilemap
+
+tilesetColumns :: Tileset -> Int
+tilesetColumns tileset = max 1 $
+  (iWidth image - tsMargin tileset + tsSpacing tileset)
+  `div` (tsTileWidth tileset + tsSpacing tileset)
+  where
+    image = head $ tsImages tileset
 
 liftMaybe _ (Just x) = return x
 liftMaybe msg Nothing = throwError msg

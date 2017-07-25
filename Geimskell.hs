@@ -5,6 +5,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ApplicativeDo #-}
 
+module Geimskell where
+
 import           Control.DeepSeq
 import           Control.Monad
 import           Data.Array

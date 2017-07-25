@@ -18,10 +18,19 @@ data-files:
          , assets/graphics/stage/*.bmp
          , assets/stages/*.tmx
 
-executable geimskell
-  main-is:             main.hs
-  -- other-modules:
-  -- other-extensions:
+library
+  exposed-modules: Reactive
+                 , Geimskell
+                 , TileSet
+                 , Stage
+                 , Sound
+                 , Camera
+                 , Geometry
+                 , Spaceship
+                 , Enemy
+                 , Random
+                 , Shoot
+                 , Paths_geimskell
   build-depends:       base
                      , array
                      , containers
@@ -49,10 +58,21 @@ executable geimskell
   -- hs-source-dirs:
   default-language:    Haskell2010
 
+executable geimskell
+  default-language:    Haskell2010
+  main-is:             main.hs
+  build-depends:       base
+                     , geimskell
+  hs-source-dirs:      exec
+
 test-suite unittests
   type: exitcode-stdio-1.0
   build-depends: base
                , QuickCheck
+               , hspec
+               , geimskell
+               , htiled
   default-language: Haskell2010
+  hs-source-dirs: tests
   main-is: UnitTests.hs
 

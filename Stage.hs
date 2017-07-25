@@ -97,7 +97,7 @@ texturesFromTileData
   x <- [minX .. maxX]
   y <- [minY .. maxY]
   let mGid =
-        tileData !? x >>= (!? y) >>= fmap tileIndexGid
+        tileData !? y >>= (!? x) >>= fmap tileIndexGid
   return $ ( (x,y),
              mGid >>=
              flip MapL.lookup tileMapping
