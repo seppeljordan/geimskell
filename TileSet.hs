@@ -20,6 +20,10 @@ import           GHC.Generics
 import qualified SDL
 import           SDL.Image as SDL
 
+import Debug.Trace
+
+traceMap f x = trace (show . f $ x) x
+
 data AssetCache =
   AssetCache { acSpriteMaps :: MapS.Map FilePath SDL.Texture
              , acSprites :: MapS.Map TextureKey SDL.Texture
@@ -104,11 +108,11 @@ instance NFData GameTile where
   rnf tile = tileSolid tile `seq` tile `seq` ()
 
 tileLookupMap renderer =
-  foldM addTileSetToMap MapL.empty . mapTilesets
+  foldM addTileSetToMap MapL.empty . mapTilesets . traceMap mapTilesets
   where
     addTileSetToMap tilemap tileset =
       foldM
-      (addTileToMap tileset)
+      (addTileToMap $ tileset)
       tilemap
       (tsTiles tileset)
     addTileToMap tileset tilemap tile = do

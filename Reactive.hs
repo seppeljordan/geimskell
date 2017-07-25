@@ -60,7 +60,7 @@ data EngineInputs = EngineInputs { inputSdlEvents :: RB.Event EventPayload
 runNetwork :: Text -- ^ The title of the window to be created
            -> Game Output -- ^ the game network to run
            -> IO ()
-runNetwork title action = withSoundServer $ \ server -> do
+runNetwork title action = withEmptySoundServer $ \ server -> do
   sdlHandler <- newAddHandler
   timeHandler <- newAddHandler
   windowSizeHandler <- newAddHandler

@@ -9,6 +9,7 @@ import           Control.Monad.IO.Class
 import           Data.Array
 import           Data.List
 import qualified Data.Map.Lazy as MapL
+import           Data.Maybe
 import           Data.Tiled hiding (Image)
 import           Data.Vector as Vector ((!?))
 import           Data.Word
@@ -18,6 +19,10 @@ import           System.Directory
 
 import           Paths_geimskell
 import           TileSet
+
+import           Debug.Trace
+
+traceMap f x = trace (show $ f x) x
 
 type ArrayIx = (Int,Int)
 
@@ -61,15 +66,17 @@ tiledToStage renderer tiledMap = do
     arrayBounds = ( (0,0), (stageWidth - 1, stageHeight - 1) )
   tileLayer <-
     liftMaybe "Could not find tile layer in map" mTileLayer
-  tileContents <-
+  printMsg $ "Load tile layer "++layerName tileLayer
+  layerContents <-
     liftMaybe "Could not load tile information from layer" $
     case layerContents tileLayer of
       LayerContentsTiles tileData -> Just tileData
       _ -> Nothing
   tileMapping <- tileLookupMap renderer tiledMap
+  printMsg $ "TileMapping keys: " ++ (show . MapL.keys $ tileMapping)
   printMsg $ rnf tileMapping `seq` "Tile Map loaded"
   let
-    tiles = texturesFromTileData arrayBounds tileMapping tileContents
+    tiles = texturesFromTileData arrayBounds tileMapping layerContents
   printMsg $ rnf tiles `seq` "Tile Information Loaded"
   let
     stageData = array arrayBounds tiles
@@ -90,9 +97,10 @@ texturesFromTileData
   x <- [minX .. maxX]
   y <- [minY .. maxY]
   let mGid =
-        tileData !? y >>= (!? x) >>= fmap tileIndexGid
+        tileData !? x >>= (!? y) >>= fmap tileIndexGid
   return $ ( (x,y),
-             (\ gid -> MapL.lookup gid tileMapping) =<< mGid
+             mGid >>=
+             flip MapL.lookup tileMapping
            )
 
 isTileLayer (Layer {layerContents = (LayerContentsTiles _)}) = True
