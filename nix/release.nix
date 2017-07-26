@@ -4,5 +4,7 @@ let
   haskellPackages = pkgs.haskellPackages.override
     { overrides = overrides; };
 in
-haskellPackages.geimskell
-
+{
+  release = haskellPackages.geimskell;
+  shell = haskellPackages.geimskell.env;
+}
