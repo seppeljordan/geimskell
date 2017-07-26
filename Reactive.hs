@@ -68,7 +68,7 @@ runNetwork title action = withEmptySoundServer $ \ server -> do
   renderer <-
     createRenderer window (-1) defaultRenderer { rendererType = AcceleratedVSyncRenderer }
   let
-    resolution = V2 768 600
+    resolution = V2 1024 768
   rendererLogicalSize renderer $= Just resolution
   requestsQuit <- newTVarIO False
   inputStage <- fromMaybe (error "Failed to load Stage") <$> loadStage renderer

@@ -115,7 +115,7 @@ gameplay pauseB restartE = mdo
                  pure stage
     outputImage =
       stageImage <>
-      (fromRelativeCompositor (L.V2 768 600) <$> worldObjectImages)
+      (fromRelativeCompositor (L.V2 1024 768) <$> worldObjectImages)
     outputSounds = unionWith (++)
       ([SoundShoot] <$ shootE)
       ([SoundExplosion] <$ explosionE)
@@ -192,7 +192,7 @@ menu = mdo
       pure ( makeRectangle
              (makeVector (-0.4) (-0.4))
              (makeVector (0.4) (-0.15)))
-    oImage = fromRelativeCompositor (L.V2 768 600) <$>
+    oImage = fromRelativeCompositor (L.V2 1024 768) <$>
       ( translateR (L.V2 0.5 0.5) . flipC (L.V2 False True) <$>
         startImage <> restartImage <> quitImage
       )
