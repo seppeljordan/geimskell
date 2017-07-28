@@ -1,5 +1,5 @@
 GHC_OPTIONS=--ghc-options=\"-Wall -threaded -fno-warn-missing-signatures\"
-NIX_PATH=nixpkgs=https://github.com/NixOS/nixpkgs/archive/f338e99039ed4c85b6eae4c5c0e046c3115ffee5.tar.gz
+# NIX_PATH=nixpkgs=https://github.com/NixOS/nixpkgs/archive/f338e99039ed4c85b6eae4c5c0e046c3115ffee5.tar.gz
 NIX_SHELL=nix-shell nix/release.nix -A shell
 
 run:
@@ -9,6 +9,7 @@ build:
 	$(NIX_SHELL) --command "exec cabal build"
 
 release:
+	rm -rf dist/
 	nix-build nix/release.nix -A release -o result
 
 shell:

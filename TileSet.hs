@@ -1,7 +1,9 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module TileSet where
 
 import           Control.DeepSeq
+import           Control.Exception
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans
@@ -15,7 +17,7 @@ import           Data.Tiled
 import qualified SDL
 import           SDL.Image as SDL
 
-import Debug.Trace
+import           Debug.Trace
 
 traceMap f x = trace (show . f $ x) x
 
@@ -60,12 +62,31 @@ loadTextureThroughCache renderer path = do
   case MapS.lookup path (acSpriteMaps cache) of
     Nothing -> do
       printMsg $ "load texture from "++path
-      tex <- liftIO $ SDL.loadTexture renderer path
+      tex <- liftIO (loadTextureFromPath path) >>= processErrorMessage path
       lift $ put
         cache
         { acSpriteMaps = (MapS.insert path tex (acSpriteMaps cache))}
       return tex
     Just tex -> return tex
+  where
+    loadTextureFromPath :: FilePath -> IO (Either String SDL.Texture)
+    loadTextureFromPath path = catch
+      (Right <$> SDL.loadTexture renderer path)
+      (\ (e :: SomeException) -> return . Left . show $ e)
+    processErrorMessage :: FilePath
+                        -> Either String a
+                        -> GraphicsLoading a
+    processErrorMessage path (Left msg) =
+      throwError $ unlines
+      [ "Something went wrong while loading a texture from: "++path
+      , "Full error message below ..."
+      , msg
+      , "... end of error message"
+      ]
+    processErrorMessage path (Right val) = do
+      printMsg $ "Loaded texture from: "++path
+      return val
+
 
 loadTextureKey renderer key = do
   tilesetTexture <- loadTextureThroughCache renderer (tkPath key)
@@ -73,7 +94,6 @@ loadTextureKey renderer key = do
   case MapS.lookup key $ acSprites cache of
     Just tex -> return tex
     Nothing -> do
-      liftIO . putStrLn $ "load tile "++show key
       tileTex <- liftIO $ SDL.createTexture
         renderer
         SDL.ARGB8888
@@ -104,14 +124,14 @@ instance NFData GameTile where
 
 tileLookupMap renderer =
   foldM addTileSetToMap MapL.empty .
-  mapTilesets .
-  traceMap (length . mapTilesets)
+  mapTilesets
   where
-    addTileSetToMap tilemap tileset =
+    addTileSetToMap tilemap tileset = do
+      printMsg $ "Processing tileset "++tsName tileset
       foldM
-      (addTileToMap $ tileset)
-      tilemap
-      (tsTiles tileset)
+        (addTileToMap $ tileset)
+        tilemap
+        (tsTiles tileset)
     addTileToMap tileset tilemap t = do
       image <- liftMaybe
         ("Tileset "++tsName tileset++" does not contain an image") $
@@ -122,7 +142,7 @@ tileLookupMap renderer =
         columns = tilesetColumns tileset
         xOffset =
           tsMargin tileset +
-          (localId `mod` traceMap id columns) *
+          (localId `mod` columns) *
           (tsSpacing tileset + tsTileWidth tileset)
         yOffset = tsMargin tileset +
                   (localId `div` columns) *

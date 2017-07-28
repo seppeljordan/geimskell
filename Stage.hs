@@ -5,6 +5,7 @@
 module Stage where
 
 import           Control.DeepSeq
+import           Control.Exception
 import           Control.Monad.IO.Class
 import           Data.Array
 import           Data.List
@@ -41,20 +42,29 @@ instance NFData Stage where
               rnf (stageData stage) `seq`
               ()
 
-loadStage :: SDL.Renderer -> IO (Maybe Stage)
-loadStage renderer = do
-  assetDir <- getDataFileName "assets/stages"
-  (eitherMakeStage, cache) <-
-    withCurrentDirectory assetDir . runGraphicsLoading emptyAssetCache $ do
-      tiledMap <- liftIO $ loadMapFile stagePath
-      tiledToStage renderer tiledMap
-  case eitherMakeStage of
-    Left msg -> do
-      putStrLn $ msg
+printExceptions action = catch action
+  (\ e -> do
+      putStrLn "An error occured"
+      print (e :: SomeException)
       return Nothing
-    Right makeStage -> return . Just . makeStage $ cache
+  )
+
+loadStage :: SDL.Renderer -> IO (Maybe Stage)
+loadStage renderer =
+  getDataFileName "assets/stages" >>=
+  flip withCurrentDirectory (printExceptions run)
   where
+    makeStage cache action = return . Just $ action cache
+    printErrorMessage msg = do
+      putStrLn msg
+      return Nothing
     stagePath = "stage.tmx"
+    run = do
+      (eitherMakeStage, cache) <- runGraphicsLoading emptyAssetCache $ do
+        printMsg $ "Start loading map @ "++stagePath
+        tiledMap <- liftIO $ loadMapFile stagePath
+        tiledToStage renderer tiledMap
+      either printErrorMessage (makeStage cache) eitherMakeStage
 
 tiledToStage :: SDL.Renderer
              -> TiledMap
@@ -73,7 +83,6 @@ tiledToStage renderer tiledMap = do
       LayerContentsTiles tileData -> Just tileData
       _ -> Nothing
   tileMapping <- tileLookupMap renderer tiledMap
-  printMsg $ "TileMapping keys: " ++ (show . MapL.keys $ tileMapping)
   printMsg $ rnf tileMapping `seq` "Tile Map loaded"
   let
     tiles = texturesFromTileData arrayBounds tileMapping layerContents

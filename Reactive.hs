@@ -71,7 +71,9 @@ runNetwork title action = withEmptySoundServer $ \ server -> do
     resolution = V2 1024 768
   rendererLogicalSize renderer $= Just resolution
   requestsQuit <- newTVarIO False
-  inputStage <- fromMaybe (error "Failed to load Stage") <$> loadStage renderer
+  let
+    exitOnFailure msg = error (msg ++ "\nExiting ...")
+  inputStage <- fromMaybe (exitOnFailure "Failed to load Stage") <$> loadStage renderer
   putStrLn $ rnf inputStage `seq` "Stage Loaded"
   gen <- newStdGen
   let

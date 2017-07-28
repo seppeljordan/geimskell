@@ -17,6 +17,7 @@ data-files:
          , assets/graphics/*.png
          , assets/graphics/stage/*.bmp
          , assets/stages/*.tmx
+         , assets/tilesets/*.tsx
 
 library
   exposed-modules: Reactive
