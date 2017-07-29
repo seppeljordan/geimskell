@@ -4,6 +4,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Geimskell where
 
@@ -22,6 +23,7 @@ import           System.Random
 
 import           Camera
 import           Enemy
+import           Geimskell.Options
 import           Geometry
 import           Random
 import           Reactive
@@ -228,7 +230,11 @@ red = rgba 255 0 0 255
 blue = rgba 0 0 255 255
 green = rgba 0 255 0 255
 
-main = withSdl $ runNetwork "spaceshooter" menu
+main = do
+  getOptions >>= \case
+    Left msg -> putStrLn msg
+    Right opts ->
+      withSdl $ runNetworkWithOptions "spaceshooter" menu opts
 
 withSdl action = do
   initializeAll

@@ -33,7 +33,7 @@ playSoundEffect server eff =
 
 withEmptySoundServer action = action EmptySoundServer
 
-withSoundServer action = do
+withCsoundServer action = do
   server <- createServer
   action server `finally` destroyServer server
 

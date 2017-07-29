@@ -22,6 +22,7 @@ import SDL.Compositor
 import SDL.Compositor.ResIndependent
 import System.Random as Rand
 
+import Geimskell.Options
 import Sound
 import Stage
 import TileSet
@@ -56,11 +57,23 @@ data EngineInputs = EngineInputs { inputSdlEvents :: RB.Event EventPayload
                                  , inputStage :: Stage
                                  }
 
+runNetworkWithOptions :: Text
+                      -> Game Output
+                      -> Options
+                      -> IO ()
+runNetworkWithOptions title action opts =
+  serverBracket $ \ server -> runNetwork title action server
+  where
+    serverBracket = case optionsSoundEngine opts of
+      OptionSoundEngineCsound -> withCsoundServer
+      OptionSoundEngineNone -> withEmptySoundServer
+
 -- | Take a game network and run it in a seprate window.
 runNetwork :: Text -- ^ The title of the window to be created
            -> Game Output -- ^ the game network to run
+           -> SoundServer
            -> IO ()
-runNetwork title action = withEmptySoundServer $ \ server -> do
+runNetwork title action server = do
   sdlHandler <- newAddHandler
   timeHandler <- newAddHandler
   windowSizeHandler <- newAddHandler

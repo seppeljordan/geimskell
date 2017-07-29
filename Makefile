@@ -38,4 +38,7 @@ update-lrucache:
 
 update-deps: update-htiled update-sdl2-compositor update-lrucache
 
+update-geimskell:
+	cd nix && cabal2nix .. > geimskell.nix
+
 .PHONY: run build shell configure haddock test

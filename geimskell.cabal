@@ -20,18 +20,20 @@ data-files:
          , assets/tilesets/*.tsx
 
 library
-  exposed-modules: Reactive
-                 , Geimskell
-                 , TileSet
-                 , Stage
-                 , Sound
+  exposed-modules: Geimskell
+                   -- the folling list should be alphabetically sorted
                  , Camera
-                 , Geometry
-                 , Spaceship
                  , Enemy
-                 , Random
-                 , Shoot
+                 , Geimskell.Options
+                 , Geometry
                  , Paths_geimskell
+                 , Random
+                 , Reactive
+                 , Shoot
+                 , Sound
+                 , Spaceship
+                 , Stage
+                 , TileSet
   build-depends:       base
                      , array
                      , containers
