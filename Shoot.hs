@@ -6,7 +6,7 @@ import Geometry
 import Reactive
 
 data Projectile = Projectile { projectileRect :: Rectangle }
-  deriving (Show,Read,Eq)
+  deriving (Show,Read,Eq,Ord)
 
 translateProjectile v p =
   p { projectileRect = translateRectangle (projectileRect p) v }

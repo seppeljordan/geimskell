@@ -179,7 +179,7 @@ filterRepeats ev = do
 -- seconds.  60 FPS would be something like
 --
 -- > sixtyFPS <- generateTicks (pure 16666)
-generateTicks :: (Integral i) => Behavior i -> Game (RB.Event ())
+generateTicks :: (Integral i) => Behavior i -> Game (RB.Event i)
 generateTicks deltaB = do
   timeE <- lift . GameNetwork $ asks inputTimeEvents
   lift . fmap (filterJust . fst) $
@@ -191,7 +191,7 @@ generateTicks deltaB = do
            accu = accu' + tx
          in
            if accu > delta
-           then (Just (), accu - delta)
+           then (Just delta, accu - delta)
            else (Nothing, accu)
       ) <$> ((,) <$> deltaB <@> timeE)
     )

@@ -18,6 +18,11 @@ data Vector = Vector { pointX :: Number
                      }
             deriving (Show,Read,Eq,Generic)
 
+instance Ord Vector where
+  compare v1 v2 = case compare (pointX v1) (pointY v2) of
+    EQ -> compare (pointY v1) (pointY v2)
+    v -> v
+
 makeVector = Vector
 
 vectorMidpoint :: Vector -> Vector -> Vector
@@ -38,6 +43,12 @@ data Rectangle = Rectangle { rectangleA :: Vector
                            , rectangleB :: Vector
                            }
                  deriving (Show,Read,Eq)
+
+instance Ord Rectangle where
+  compare r1 r2 =
+    case compare (rectangleA r1) (rectangleA r2) of
+      EQ -> compare (rectangleB r1) (rectangleB r2)
+      v -> v
 
 makeRectangle (Vector ax ay) (Vector bx by) =
   Rectangle

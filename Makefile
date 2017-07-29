@@ -16,7 +16,7 @@ shell:
 	$(NIX_SHELL)
 
 configure:
-	$(NIX_SHELL) --command "exec cabal configure"
+	$(NIX_SHELL) --command "exec cabal configure $(GHC_OPTIONS)"
 
 haddock:
 	$(NIX_SHELL) --command "exec cabal haddock --executable"

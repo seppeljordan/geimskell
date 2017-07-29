@@ -10,11 +10,10 @@ import Random
 type Enemy = Rectangle
 
 makeEnemies :: Behavior Number
-            -> Behavior [Enemy]
             -> Event ()
             -> Event ()
-            -> Game (Tidings [Enemy])
-makeEnemies spawnXPosition enemiesB spawnTicksE ticksE = do
+            -> Game (Event ([Enemy] -> [Enemy]))
+makeEnemies spawnXPosition spawnTicksE ticksE = do
   let
     randomVector :: StdGen -> (Vector, StdGen)
     randomVector =
@@ -28,8 +27,6 @@ makeEnemies spawnXPosition enemiesB spawnTicksE ticksE = do
     randomGenerator
     (randomVector <$ spawnTicksE)
   let
-    enemiesE =
-      flip ($) <$> enemiesB <@> changeEnemies
     changeEnemies = unionWith (.)
       ((\ point es -> pointToEnemy point : es) <$> apply moveVectorE randomPosition)
       (moveEnemies <$ ticksE)
@@ -42,4 +39,4 @@ makeEnemies spawnXPosition enemiesB spawnTicksE ticksE = do
       in makeRectangle
          (makeVector (x - 0.1) (y - 0.1))
          (makeVector (x + 0.1) (y + 0.1))
-  return $ tidings enemiesE enemiesB
+  return $ changeEnemies

@@ -49,9 +49,9 @@ translatePlayerShip :: Vector -> PlayerShip -> PlayerShip
 translatePlayerShip v ship@(PlayerShip { psArea = oldArea }) =
   ship { psArea = translateRectangle oldArea v}
 
-makeSpaceship :: Event Vector -> Behavior PlayerShip -> Tidings PlayerShip
-makeSpaceship v shipB =
-  tidings (flip translatePlayerShip <$> shipB <@> v) shipB
+makeSpaceship :: Event Vector
+              -> Event (PlayerShip -> PlayerShip)
+makeSpaceship v = translatePlayerShip <$> v
 
 spaceshipPoint :: PlayerShip -> Vector
 spaceshipPoint = rectangleMidpoint . psArea

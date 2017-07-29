@@ -10,8 +10,13 @@ module Geimskell where
 
 import           Control.DeepSeq
 import           Control.Monad
+import           Control.Monad.Trans.Writer
 import           Data.Array
+import           Data.List
+import           Data.Maybe
 import           Data.Monoid
+import qualified Data.Set as Set
+import           Data.Tuple
 import           GHC.Generics
 import qualified Linear.V2 as L
 import           Reactive.Banana as RB
@@ -24,6 +29,7 @@ import           System.Random
 import           Camera
 import           Enemy
 import           Geimskell.Options
+import           Geimskell.WorldState
 import           Geometry
 import           Random
 import           Reactive
@@ -62,7 +68,7 @@ gameplay pauseB restartE = mdo
             else (Nothing, cooldownTimer)
       ) <$>
       ((,) <$> shootCooldown <*> shootTriggerB <@ ticks))
-  enemiesT <- makeEnemies (camPosition <$> cameraB) enemiesB spawnTicks ticks
+  transformEnemiesE <- makeEnemies (camPosition <$> cameraB) (void spawnTicks) (void ticks)
   let
     projectilesT =
       makeShoot
@@ -70,8 +76,8 @@ gameplay pauseB restartE = mdo
       (pure (0.05,0.05))
       shootE
       projectilesB
-      ticks
-    playerT =
+      (void ticks)
+    playerTransformationsE =
       makeSpaceship
       ( apply
         ((\ speed d -> vectorAdd d (makeVector speed 0)) <$>
@@ -80,27 +86,17 @@ gameplay pauseB restartE = mdo
         fmap (vectorScale 0.016 . v2ToVector) $
         (facts directionT <@ ticks)
       )
-      playerB
-    cameraT = makeCamera ticks cameraB
+    cameraT = makeCamera (void ticks) cameraB
     outputRenderTick = () <$ ticks
-    worldStateT =
-      combineToWorldState <$>
-      cameraT <*>
-      playerT <*>
-      projectilesT <*>
-      enemiesT
-    explosionE =
-      fmap (const ()) .
-      filterE (>0) .
-      fmap snd .
-      rumors $
-      worldStateT
-  worldStateB <-
-    stepper
-    initialWorldState $
-    unionWith (flip const)
-    (whenE (not <$> gameStopB) $ fst <$> rumors worldStateT)
-    (initialWorldState <$ restartE)
+    explosionE = filterE (not . null) worldUpdateE
+  (worldUpdateE, worldStateB) <- combineWorldState
+    initialWorldState
+    gameStopB
+    ticks
+    (rumors cameraT)
+    playerTransformationsE
+    transformEnemiesE
+    (rumors projectilesT)
   let
     gameStopB =
       (||) <$>
@@ -131,6 +127,7 @@ gameplay pauseB restartE = mdo
                  , wsCamera = Camera { camSpeed = 0.001
                                      , camPosition = 0
                                      }
+                 , wsInvincableRemainingMSeconds = 0
                  }
     initialSpaceship =
       PlayerShip { psArea = makeRectangle
@@ -199,7 +196,7 @@ menu = mdo
         startImage <> restartImage <> quitImage
       )
     oSounds = never
-    oRenderTick = ticks
+    oRenderTick = void ticks
     exitButtonE =
       void . whenE pauseB . filterE (== MenuQuit) $
       menuSelection <@ enterE
@@ -322,48 +319,6 @@ vectorToV2 v = L.V2 x y
     y = pointY v
 v2ToVector (L.V2 x y) = makeVector x y
 
-handleCollisions projectiles enemies =
-  (newProjectiles, newEnemies)
-  where
-    newProjectiles = filter (not . isEnemyCollision . projectileRect)
-                     projectiles
-    newEnemies = filter (not . isProjectileCollision) enemies
-    isEnemyCollision r =
-      or . map (rectanglesOverlap r) $ enemies
-    isProjectileCollision r =
-      or . map (rectanglesOverlap r . projectileRect) $ projectiles
-
-data WorldState = WorldState { wsPlayer :: PlayerShip
-                             , wsProjectiles :: [Projectile]
-                             , wsEnemies :: [Enemy]
-                             , wsCamera :: Camera
-                             }
-
-combineToWorldState camera player projectiles enemies =
-  ( WorldState
-    { wsPlayer = handleHits player
-    , wsProjectiles =
-      filter (not . outOfBounds . projectileRect ) newProjectiles
-    , wsEnemies =
-      filter (not . collisionWithPlayer) . filter (not . outOfBounds) $ newEnemies
-    , wsCamera = camera
-    }
-  , length enemies - length newEnemies
-  )
-  where
-    collisionWithPlayer r = rectanglesOverlap r (playerShipRectangle player)
-    handleHits p
-      | not . null $ filter collisionWithPlayer enemies = reducePlayerHealth p
-      | otherwise = p
-    (newProjectiles, newEnemies) =
-      handleCollisions projectiles enemies
-    outOfBounds rect =
-      x <= (-5) || x > 5 || y <= (-5) || y > 5
-      where
-        x = pointX p - camPosition camera
-        y = pointY p
-        p = rectangleMidpoint rect
-
 renderWorldState xPosition
                  (WorldState { wsPlayer = player
                              , wsEnemies = enemies
@@ -413,3 +368,31 @@ renderStage camPosition stage =
       x * relativeWidth < camPosition + 2
       where
         x = fromIntegral gridXPos
+
+combineWorldState :: WorldState
+                  -> Behavior Bool
+                  -> RB.Event Int
+                  -> RB.Event Camera
+                  -> RB.Event (PlayerShip -> PlayerShip)
+                  -> RB.Event ([Enemy] -> [Enemy])
+                  -> RB.Event [Projectile]
+                  -> Game ( RB.Event [WorldUpdateEvent]
+                          , Behavior WorldState)
+combineWorldState initialWorldState isPauseB tickE camE playerE enemiesE
+  projectilesE =
+  mapAccum initialWorldState .
+  whenE (not <$> isPauseB) $
+  (\action -> swap . updateWorldState action) <$> updatesE
+  where
+    updatesE :: RB.Event (UpdateAction ())
+    updatesE = unionsWith (>>)
+      [ updateTickW <$> tickE
+      , (\ projectiles -> updateProjectilesW projectiles >>
+                          handleCollisionsW
+        ) <$> projectilesE
+      , (\ enemies -> updateEnemiesW enemies >>
+                      handleCollisionsW
+        ) <$> enemiesE
+      , updatePlayerW <$> playerE
+      , updateCameraW <$> camE
+      ]
