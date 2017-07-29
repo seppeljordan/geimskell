@@ -139,7 +139,7 @@ tileLookupMap renderer =
       let
         gid = fromIntegral $ tsInitialGid tileset + tileId t
         localId = fromIntegral $ tileId t
-        columns = tilesetColumns tileset
+        columns = tsColumns tileset
         xOffset =
           tsMargin tileset +
           (localId `mod` columns) *
@@ -157,13 +157,6 @@ tileLookupMap renderer =
                             , tileSolid = False
                             }
       return $ MapL.insert gid gametile tilemap
-
-tilesetColumns :: Tileset -> Int
-tilesetColumns tileset = max 1 $
-  (iWidth image - tsMargin tileset + tsSpacing tileset)
-  `div` (tsTileWidth tileset + tsSpacing tileset)
-  where
-    image = head $ tsImages tileset
 
 liftMaybe _ (Just x) = return x
 liftMaybe msg Nothing = throwError msg
