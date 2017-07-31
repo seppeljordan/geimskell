@@ -26,19 +26,33 @@ data WorldUpdateEvent = EnemyDiedEvent Enemy
                       | ProjectileDestroyedEvent Projectile
   deriving Generic
 
-type UpdateAction = StateT WorldState (Writer [WorldUpdateEvent])
+newtype UpdateAction a =
+  UpdateAction
+  {fromUpdateAction
+   :: StateT WorldState (Writer [WorldUpdateEvent]) a}
+
+instance Functor UpdateAction where
+  fmap f (UpdateAction a) = UpdateAction $ f <$> a
+
+instance Applicative UpdateAction where
+  pure v = UpdateAction $ pure v
+  (<*>) (UpdateAction f) (UpdateAction x) = UpdateAction $ f <*> x
+
+instance Monad UpdateAction where
+  return = pure
+  (>>=) action generator = UpdateAction $ fromUpdateAction action >>= fromUpdateAction . generator
 
 modifyWorldState :: (WorldState -> WorldState) -> UpdateAction ()
-modifyWorldState f = modify f
+modifyWorldState f = UpdateAction $ modify f
 
-putWorldState ws = put ws
+putWorldState ws = UpdateAction $ put ws
 
-getWorldState = get
+getWorldState = UpdateAction $ get
 
 tellEvent :: WorldUpdateEvent -> UpdateAction ()
-tellEvent e = lift . tell $ [e]
+tellEvent e = UpdateAction . lift . tell $ [e]
 
-tellEvents = lift . tell
+tellEvents = UpdateAction . lift . tell
 
 getProjectileDestroyedEvent :: WorldUpdateEvent -> Maybe Projectile
 getProjectileDestroyedEvent (ProjectileDestroyedEvent p) = Just p
@@ -57,7 +71,7 @@ outOfBounds camera rect =
 updateWorldState :: UpdateAction ()
                  -> WorldState
                  -> (WorldState, [WorldUpdateEvent])
-updateWorldState action ws =
+updateWorldState (UpdateAction action) ws =
   runWriter (execStateT action ws)
 
 updateTickW :: Int -> UpdateAction ()
@@ -122,17 +136,37 @@ handlePlayerEnemyCollisions = do
     newPlayer = if null hitEnemies
                 then player
                 else reducePlayerHealth player
+  tellEvents $ fmap EnemyDiedEvent hitEnemies
   putWorldState ws
     { wsPlayer = newPlayer
     , wsEnemies = nonHitEnemies }
 
-updatePlayerW :: (PlayerShip -> PlayerShip)
+updatePlayerW :: Number
+              -> (PlayerShip -> PlayerShip)
               -> UpdateAction ()
-updatePlayerW f = do
+updatePlayerW screenWidth f = do
   modifyWorldState $ \ ws -> ws { wsPlayer = f (wsPlayer ws) }
+  handlePlayerBorders screenWidth
   handlePlayerEnemyCollisions
+
+handlePlayerBorders screenWidth = do
+  ws <- getWorldState
+  let
+    oldPlayer = wsPlayer ws
+    camera = camPosition $ wsCamera ws
+    playerRect = psArea oldPlayer
+    correctionX =
+      max 0 ((camera - screenWidth/2) - pointX (rectangleA playerRect)) +
+      min 0 ((camera + screenWidth/2) - pointX (rectangleB playerRect))
+    correctionY =
+      max 0 ((-0.5) - pointY (rectangleA playerRect)) +
+      min 0 (0.5 - pointY (rectangleB playerRect))
+    newPlayer = translatePlayerShip
+                (makeVector correctionX correctionY)
+                oldPlayer
+  putWorldState ws { wsPlayer = newPlayer }
 
 updateCameraW :: Camera
               -> UpdateAction ()
 updateCameraW newCam =
-  modify $ \ ws -> ws { wsCamera = newCam }
+  modifyWorldState $ \ ws -> ws { wsCamera = newCam }

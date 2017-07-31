@@ -138,6 +138,9 @@ runNetwork title action server = do
 reactimate :: RB.Event (IO ()) -> Game ()
 reactimate = lift . lift . RB.reactimate
 
+screenWidth = 1024
+screenHeight = 768
+
 sdlEventStream :: Game (RB.Event EventPayload)
 sdlEventStream =
   lift

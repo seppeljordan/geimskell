@@ -68,3 +68,10 @@ rectanglesOverlap
   where
     xcollision = wx >= ax && bx >= vx
     ycollision = wy >= ay && by >= vy
+
+rectangleHeight :: Rectangle -> Number
+rectangleHeight r =
+  abs $ pointY q - pointY p
+  where
+    p = rectangleA r
+    q = rectangleB r

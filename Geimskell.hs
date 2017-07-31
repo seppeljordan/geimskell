@@ -97,6 +97,7 @@ gameplay pauseB restartE = mdo
     playerTransformationsE
     transformEnemiesE
     (rumors projectilesT)
+    (putWorldState initialWorldState <$ restartE)
   let
     gameStopB =
       (||) <$>
@@ -376,19 +377,25 @@ combineWorldState :: WorldState
                   -> RB.Event (PlayerShip -> PlayerShip)
                   -> RB.Event ([Enemy] -> [Enemy])
                   -> RB.Event [Projectile]
+                  -> RB.Event (UpdateAction ())
                   -> Game ( RB.Event [WorldUpdateEvent]
                           , Behavior WorldState)
 combineWorldState initialWorldState isPauseB tickE camE playerE enemiesE
-  projectilesE =
-  mapAccum initialWorldState .
-  whenE (not <$> isPauseB) $
+  projectilesE extraEvents =
+  mapAccum initialWorldState $
   (\action -> swap . updateWorldState action) <$> updatesE
   where
     updatesE :: RB.Event (UpdateAction ())
     updatesE = unionsWith (>>)
+      [ whenE (not <$> isPauseB) gameplayUpdates
+      , extraEvents
+      ]
+    gameplayUpdates = unionsWith (>>)
       [ updateTickW <$> tickE
       , updateProjectilesW <$> projectilesE
       , updateEnemiesW <$> enemiesE
-      , updatePlayerW <$> playerE
+      , updatePlayerW
+        (fromIntegral screenWidth / fromIntegral screenHeight) <$>
+        playerE
       , updateCameraW <$> camE
       ]
