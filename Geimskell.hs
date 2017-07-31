@@ -387,12 +387,8 @@ combineWorldState initialWorldState isPauseB tickE camE playerE enemiesE
     updatesE :: RB.Event (UpdateAction ())
     updatesE = unionsWith (>>)
       [ updateTickW <$> tickE
-      , (\ projectiles -> updateProjectilesW projectiles >>
-                          handleCollisionsW
-        ) <$> projectilesE
-      , (\ enemies -> updateEnemiesW enemies >>
-                      handleCollisionsW
-        ) <$> enemiesE
+      , updateProjectilesW <$> projectilesE
+      , updateEnemiesW <$> enemiesE
       , updatePlayerW <$> playerE
       , updateCameraW <$> camE
       ]

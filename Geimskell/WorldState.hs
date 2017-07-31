@@ -74,6 +74,7 @@ updateProjectilesW updateProjectiles = do
       updateProjectiles
   tellEvents $ fmap ProjectileDestroyedEvent destroyedProjectiles
   putWorldState oldWS { wsProjectiles = newProjectiles }
+  handleEnemyProjectileCollisions
 
 updateEnemiesW :: ([Enemy] -> [Enemy])
                -> UpdateAction ()
@@ -85,10 +86,12 @@ updateEnemiesW updateEnemies = do
       (outOfBounds (wsCamera oldWS))
       (updateEnemies . wsEnemies $ oldWS)
   putWorldState oldWS { wsEnemies = newEnemies}
+  handleEnemyProjectileCollisions
+  handlePlayerEnemyCollisions
 
 
-handleCollisionsW :: UpdateAction ()
-handleCollisionsW = do
+handleEnemyProjectileCollisions :: UpdateAction ()
+handleEnemyProjectileCollisions = do
   ws <- getWorldState
   let
     enemies = wsEnemies ws
@@ -107,10 +110,27 @@ handleCollisionsW = do
                    , wsEnemies = newEnemies
                    }
 
+handlePlayerEnemyCollisions :: UpdateAction ()
+handlePlayerEnemyCollisions = do
+  ws <- getWorldState
+  let
+    player = wsPlayer ws
+    (hitEnemies, nonHitEnemies) =
+      partition
+      (rectanglesOverlap $ playerShipRectangle player)
+      (wsEnemies ws)
+    newPlayer = if null hitEnemies
+                then player
+                else reducePlayerHealth player
+  putWorldState ws
+    { wsPlayer = newPlayer
+    , wsEnemies = nonHitEnemies }
+
 updatePlayerW :: (PlayerShip -> PlayerShip)
               -> UpdateAction ()
-updatePlayerW f =
-  modify $ \ ws -> ws { wsPlayer = f (wsPlayer ws) }
+updatePlayerW f = do
+  modifyWorldState $ \ ws -> ws { wsPlayer = f (wsPlayer ws) }
+  handlePlayerEnemyCollisions
 
 updateCameraW :: Camera
               -> UpdateAction ()
