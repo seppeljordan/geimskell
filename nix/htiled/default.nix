@@ -4,11 +4,11 @@
 }:
 mkDerivation {
   pname = "htiled";
-  version = "0.1.4.0";
+  version = "0.2.0.0";
   src = fetchgit {
     url = "https://github.com/seppeljordan/htiled.git";
-    sha256 = "1810g5alsqzqs8w4y75c5cm272w2f2pc9kdz3c6vp3hy4cm54s56";
-    rev = "1ab52aaa8565f99a782587e11b8a581448a925f1";
+    sha256 = "1gzk9fp2yv4lcf97bglci8478yqjnlzp2h4rwxr1lj915993f5fr";
+    rev = "102dbd871a0a1203628be2ba502afc55e5c30798";
   };
   libraryHaskellDepends = [
     base base64-bytestring bytestring filepath hxt split vector zlib
