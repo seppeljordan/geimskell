@@ -68,7 +68,7 @@ gameplay pauseB restartE = mdo
             else (Nothing, cooldownTimer)
       ) <$>
       ((,) <$> shootCooldown <*> shootTriggerB <@ ticks))
-  transformEnemiesE <- makeEnemies (camPosition <$> cameraB) (void spawnTicks) (void ticks)
+  transformEnemiesE <- makeEnemies (camPosition <$> cameraB) (void spawnTicks) ticks
   let
     projectilesT =
       makeShoot
@@ -87,7 +87,7 @@ gameplay pauseB restartE = mdo
         (facts directionT <@ ticks)
       )
     cameraT = makeCamera (void ticks) cameraB
-    outputRenderTick = () <$ ticks
+    outputRenderTick = void ticks
     explosionE = filterE (not . null) worldUpdateE
   (worldUpdateE, worldStateB) <- combineWorldState
     initialWorldState

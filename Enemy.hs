@@ -9,11 +9,13 @@ import Random
 
 type Enemy = Rectangle
 
+enemySpeed = 0.6 -- per second
+
 makeEnemies :: Behavior Number
             -> Event ()
-            -> Event ()
+            -> Event Int
             -> Game (Event ([Enemy] -> [Enemy]))
-makeEnemies spawnXPosition spawnTicksE ticksE = do
+makeEnemies spawnXPosition spawnTicksE timeDeltaE = do
   let
     randomVector :: StdGen -> (Vector, StdGen)
     randomVector =
@@ -29,10 +31,14 @@ makeEnemies spawnXPosition spawnTicksE ticksE = do
   let
     changeEnemies = unionWith (.)
       ((\ point es -> pointToEnemy point : es) <$> apply moveVectorE randomPosition)
-      (moveEnemies <$ ticksE)
-    moveEnemies = map moveEnemy
-    moveEnemy =
-      flip translateRectangle (makeVector (-0.01) 0)
+      (moveEnemies <$> timeDeltaE)
+    moveEnemies = map . moveEnemy
+    moveEnemy timeDelta =
+      let
+        moveDistance :: Number
+        moveDistance = enemySpeed * 0.001 * 0.001 * fromIntegral timeDelta
+      in
+      flip translateRectangle (makeVector (- moveDistance) 0)
     pointToEnemy v =
       let x = pointX v
           y = pointY v
