@@ -62,24 +62,30 @@ runNetworkWithOptions :: Text
                       -> Options
                       -> IO ()
 runNetworkWithOptions title action opts =
-  serverBracket $ \ server -> runNetwork title action server
+  serverBracket $ \ server -> runNetwork title action server gameRendererType
   where
     serverBracket = case optionsSoundEngine opts of
       OptionSoundEngineCsound -> withCsoundServer
       OptionSoundEngineNone -> withEmptySoundServer
+    gameRendererType =
+      case optionsRendererType opts of
+        OptionRendererHardware -> AcceleratedRenderer
+        OptionRendererSoftware -> SoftwareRenderer
 
 -- | Take a game network and run it in a seprate window.
 runNetwork :: Text -- ^ The title of the window to be created
            -> Game Output -- ^ the game network to run
            -> SoundServer
+           -> RendererType
            -> IO ()
-runNetwork title action server = do
+runNetwork title action server gameRendererType = do
   sdlHandler <- newAddHandler
   timeHandler <- newAddHandler
   windowSizeHandler <- newAddHandler
   window <- createWindow title defaultWindow
   renderer <-
-    createRenderer window (-1) defaultRenderer { rendererType = AcceleratedVSyncRenderer }
+    createRenderer window (-1)
+    defaultRenderer { rendererType = gameRendererType }
   let
     resolution = V2 1024 768
   rendererLogicalSize renderer $= Just resolution
