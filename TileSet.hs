@@ -45,6 +45,9 @@ type TextureCache = MapS.Map TextureKey SDL.Texture
 
 type GraphicsLoading = ExceptT String (StateT AssetCache IO)
 
+runGraphicsLoading :: AssetCache
+                   -> GraphicsLoading a
+                   -> IO (Either String a, AssetCache)
 runGraphicsLoading assetCache action =
    flip runStateT assetCache . runExceptT $ action
 

@@ -2,7 +2,12 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-module Stage where
+module Stage ( Stage
+             , stageAssetCache
+             , stageData
+             , loadStage
+             )
+where
 
 import           Control.DeepSeq
 import           Control.Exception
@@ -10,7 +15,6 @@ import           Control.Monad.IO.Class
 import           Data.Array
 import           Data.List
 import qualified Data.Map.Lazy as MapL
-import           Data.Maybe
 import           Data.Tiled hiding (Image)
 import           Data.Vector as Vector ((!?))
 import           Data.Word
@@ -20,10 +24,6 @@ import           System.Directory
 
 import           Paths_geimskell
 import           TileSet
-
-import           Debug.Trace
-
-traceMap f x = trace (show $ f x) x
 
 type ArrayIx = (Int,Int)
 
@@ -94,9 +94,6 @@ tiledToStage renderer tiledMap = do
     layers = mapLayers tiledMap
     mTileLayer = find isTileLayer layers
 
-getFirstTileLayer :: TiledMap -> Maybe Layer
-getFirstTileLayer = find isTileLayer . mapLayers
-
 texturesFromTileData :: (ArrayIx,ArrayIx)
                      -> MapL.Map GId GameTile
                      -> TileData
@@ -114,10 +111,3 @@ texturesFromTileData
 
 isTileLayer (Layer {layerContents = (LayerContentsTiles _)}) = True
 isTileLayer _ = False
-
-safeIndex :: [a] -> Int -> Maybe a
-safeIndex (x:xs) n
-  | n < 0 = Nothing
-  | n == 0 = Just x
-  | n > 0 = safeIndex xs (n - 1)
-safeIndex _ _ = Nothing
