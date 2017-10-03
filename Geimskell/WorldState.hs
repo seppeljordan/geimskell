@@ -42,6 +42,7 @@ data WorldState = WorldState { wsPlayer :: PlayerShip
                              , wsCamera :: Camera
                              , wsInvincibleRemainingSeconds :: Int
                              }
+  deriving (Generic)
 
 mkWorldState :: PlayerShip -> [Projectile] -> [Enemy] -> Camera -> WorldState
 mkWorldState player projectiles enemies camera =
@@ -60,6 +61,7 @@ newtype UpdateAction a =
   UpdateAction
   {fromUpdateAction
    :: StateT WorldState (Writer [WorldUpdateEvent]) a}
+  deriving Generic
 
 instance Functor UpdateAction where
   fmap f (UpdateAction a) = UpdateAction $ f <$> a
