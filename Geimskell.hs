@@ -114,7 +114,7 @@ gameplay pauseB restartE = mdo
                  pure stage
     outputImage =
       stageImage <>
-      (fromRelativeCompositor (L.V2 1024 768) <$> worldObjectImages)
+      (fromRelativeCompositor (fromIntegral <$> L.V2 screenWidth screenHeight) <$> worldObjectImages)
     outputSounds = unionWith (++)
       ([SoundShoot] <$ shootE)
       ([SoundExplosion] <$ explosionE)
@@ -168,7 +168,7 @@ menu = mdo
       (selectionDown <$ arrowDownE)
   let
     startImage = renderRectangle <$>
-      ((\m -> case m of
+      ((\case
            MenuStart -> red
            _ -> blue
        ) <$> menuSelection) <*>
@@ -176,7 +176,7 @@ menu = mdo
             (makeVector (-0.4) 0.15)
             (makeVector (0.4) 0.4))
     restartImage = renderRectangle <$>
-      ((\m -> case m of
+      ((\case
            MenuRestart -> red
            _ -> blue
        ) <$> menuSelection) <*>
@@ -184,14 +184,14 @@ menu = mdo
             (makeVector (-0.4) 0.1)
             (makeVector (0.4) (-0.1)))
     quitImage = renderRectangle <$>
-      ((\m -> case m of
+      ((\case
            MenuQuit -> red
            _ -> blue
        ) <$> menuSelection) <*>
       pure ( makeRectangle
              (makeVector (-0.4) (-0.4))
              (makeVector (0.4) (-0.15)))
-    oImage = fromRelativeCompositor (L.V2 1024 768) <$>
+    oImage = fromRelativeCompositor (fromIntegral <$> L.V2 screenWidth screenHeight) <$>
       ( translateR (L.V2 0.5 0.5) . flipC (L.V2 False True) <$>
         startImage <> restartImage <> quitImage
       )

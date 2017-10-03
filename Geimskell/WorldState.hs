@@ -72,7 +72,8 @@ instance Applicative UpdateAction where
 
 instance Monad UpdateAction where
   return = pure
-  (>>=) action generator = UpdateAction $ fromUpdateAction action >>= fromUpdateAction . generator
+  (>>=) action generator =
+    UpdateAction $ fromUpdateAction action >>= fromUpdateAction . generator
 
 modifyWorldState :: (WorldState -> WorldState) -> UpdateAction ()
 modifyWorldState f = UpdateAction $ modify f

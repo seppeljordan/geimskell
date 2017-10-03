@@ -87,7 +87,7 @@ runNetwork title action server gameRendererType = do
     createRenderer window (-1)
     defaultRenderer { rendererType = gameRendererType }
   let
-    resolution = V2 1024 768
+    resolution = V2 screenWidth screenHeight
   rendererLogicalSize renderer $= Just resolution
   requestsQuit <- newTVarIO False
   let
@@ -144,7 +144,7 @@ runNetwork title action server gameRendererType = do
 reactimate :: RB.Event (IO ()) -> Game ()
 reactimate = lift . lift . RB.reactimate
 
-screenWidth = 1024
+screenWidth = 1360
 screenHeight = 768
 
 sdlEventStream :: Game (RB.Event EventPayload)
