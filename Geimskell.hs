@@ -122,14 +122,13 @@ gameplay pauseB restartE = mdo
   return $ Output {..}
   where
     initialWorldState =
-      WorldState { wsPlayer = initialSpaceship
-                 , wsProjectiles = []
-                 , wsEnemies = []
-                 , wsCamera = Camera { camSpeed = 0.001
-                                     , camPosition = 0
-                                     }
-                 , wsInvincableRemainingMSeconds = 0
-                 }
+      mkWorldState
+      initialSpaceship
+      []
+      []
+      Camera { camSpeed = 0.001
+             , camPosition = 0
+             }
     initialSpaceship =
       PlayerShip { psArea = makeRectangle
                    (makeVector (-0.1) (-0.1))
@@ -320,12 +319,12 @@ vectorToV2 v = L.V2 x y
     y = pointY v
 v2ToVector (L.V2 x y) = makeVector x y
 
-renderWorldState xPosition
-                 (WorldState { wsPlayer = player
-                             , wsEnemies = enemies
-                             , wsProjectiles = projectiles }) =
+renderWorldState xPosition worldstate =
   outputImage
   where
+    player = wsPlayer worldstate
+    projectiles = wsProjectiles worldstate
+    enemies = wsEnemies worldstate
     spaceshipGraphics = renderRectangle blue $ playerShipRectangle player
     projectilesImage =
       mconcat . map (renderRectangle red . projectileRect) $

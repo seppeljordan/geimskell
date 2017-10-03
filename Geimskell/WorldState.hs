@@ -1,6 +1,27 @@
 {-# LANGUAGE DeriveGeneric #-}
 
-module Geimskell.WorldState where
+module Geimskell.WorldState
+  ( -- * WorldState
+    WorldState
+  , mkWorldState
+  , wsPlayer
+  , wsProjectiles
+  , wsEnemies
+  , wsCamera
+  -- * Updating WorldState
+  , UpdateAction
+  , updateWorldState
+  , updatePlayerW
+  , updateEnemiesW
+  , updateProjectilesW
+  , updateTickW
+  , updateCameraW
+  , putWorldState
+  -- * Notifications to the engine
+  , WorldUpdateEvent
+  )
+
+where
 
 import Control.Monad.Trans
 import Control.Monad.Trans.State
@@ -19,8 +40,17 @@ data WorldState = WorldState { wsPlayer :: PlayerShip
                              , wsProjectiles :: [Projectile]
                              , wsEnemies :: [Enemy]
                              , wsCamera :: Camera
-                             , wsInvincableRemainingMSeconds :: Int
+                             , wsInvincibleRemainingSeconds :: Int
                              }
+
+mkWorldState :: PlayerShip -> [Projectile] -> [Enemy] -> Camera -> WorldState
+mkWorldState player projectiles enemies camera =
+  WorldState { wsPlayer = player
+             , wsProjectiles = projectiles
+             , wsEnemies = enemies
+             , wsCamera = camera
+             , wsInvincibleRemainingSeconds = 0
+             }
 
 data WorldUpdateEvent = EnemyDiedEvent Enemy
                       | ProjectileDestroyedEvent Projectile
