@@ -357,7 +357,7 @@ renderStage camPosition stage =
       ( translateA
         ( L.V2
           (x * tileWidth - camPositionAbsolute)
-          (y * tileHeight)
+          (y * tileHeight + tileHeight `div` 2)
         )
       ) $
       sizedA (L.V2 tileWidth tileHeight) (tileTexture tile)
