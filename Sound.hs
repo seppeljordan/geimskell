@@ -8,7 +8,9 @@ import Control.Exception
 import Control.Monad.STM
 import Sound.OSC.Transport.FD
 import Sound.OSC.Transport.FD.UDP
-import Sound.OSC.Type
+import Sound.OSC.Packet
+import Sound.OSC.Datum
+-- import Sound.OSC.Type
 import System.Process
 
 import Paths_geimskell
