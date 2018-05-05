@@ -6,6 +6,9 @@ NIX_SHELL_PURE=nix-shell nix/release.nix -A shell --pure
 run:
 	$(NIX_SHELL) --command "exec cabal run -- --sound-engine csound"
 
+run-profiling:
+	$(NIX_SHELL) --command "exec cabal run -- --sound-engine csound +RTS  -p -hc -sgeimskell.summary"
+
 run-nosound:
 	$(NIX_SHELL) --command "exec cabal run -- --sound-engine none"
 
@@ -21,6 +24,9 @@ shell:
 
 configure:
 	$(NIX_SHELL_PURE) --command "exec cabal configure $(GHC_OPTIONS)"
+
+configure-profiling:
+	$(NIX_SHELL_PURE) --command "exec cabal configure $(GHC_OPTIONS)  -fprof-auto -rtsopts --enable-profiling --enable-tests --enable-benchmarks"
 
 haddock:
 	$(NIX_SHELL_PURE) --command "exec cabal haddock --executable"
