@@ -44,8 +44,9 @@ instr ListenForExplosions
   nxtmsg:
   kk  OSClisten giHandle, "/explosion", "f", kf1
     if (kk == 0) goto ex
+    prints "EXPLOSION!"
     printk 0,kf1
-    event "i", "expolosion", 0, 1
+    event "i", "Explosion", 0, 1
     kgoto nxtmsg
   ex:
 endin
@@ -159,8 +160,8 @@ endin
 
 </CsInstruments>
 <CsScore>
-;; i "ListenForShots"      0 [3600*24*7]
-;; i "ListenForExplosions" 0 [3600*24*7]
+i "ListenForShots"      0 [3600*24*7]
+i "ListenForExplosions" 0 [3600*24*7]
 ;; e 0 1
 
 ;; i "Explosion" 0 1
