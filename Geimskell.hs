@@ -19,7 +19,7 @@ import qualified Data.Set as Set
 import           Data.Tuple
 import           GHC.Generics
 import qualified Linear.V2 as L
-import           Reactive.Banana as RB
+import           Reactive.Banana as RB hiding ((<>))
 import           SDL hiding (Rectangle, Vector, trace)
 import           SDL.Compositor hiding
   (clear, present, createTexture, rendererRenderTarget)

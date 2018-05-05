@@ -267,7 +267,3 @@ instance Monoid a => Monoid (Tidings a) where
 instance Monoid a => Monoid (Behavior a) where
   mappend a b = mappend <$> a <*> b
   mempty = pure mempty
-
-instance Monoid a => Monoid (RB.Event a) where
-  mappend a b = unionWith mappend a b
-  mempty = never
