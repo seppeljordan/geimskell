@@ -88,7 +88,7 @@ gameplay pauseB restartE = mdo
       )
     cameraT = makeCamera (void ticks) cameraB
     outputRenderTick = void ticks
-    explosionE = filterE (not . null) worldUpdateE
+    explosionE = filterE (not . null . filter isEnemyDiedEvent) worldUpdateE
   (worldUpdateE, worldStateB) <- combineWorldState
     initialWorldState
     gameStopB

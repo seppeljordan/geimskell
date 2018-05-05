@@ -22,6 +22,7 @@ sendCommand (SoundServer { serverCommandChannel = commandChannel }
             ) action =
   atomically $ writeTChan commandChannel action
 
+playSoundEffect :: SoundServer -> SoundEffect -> IO ()
 playSoundEffect server eff =
   sendCommand server action
   where

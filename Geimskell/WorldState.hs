@@ -19,6 +19,7 @@ module Geimskell.WorldState
   , putWorldState
   -- * Notifications to the engine
   , WorldUpdateEvent
+  , isEnemyDiedEvent
   )
 
 where
@@ -56,6 +57,10 @@ mkWorldState player projectiles enemies camera =
 data WorldUpdateEvent = EnemyDiedEvent Enemy
                       | ProjectileDestroyedEvent Projectile
   deriving Generic
+
+isEnemyDiedEvent :: WorldUpdateEvent -> Bool
+isEnemyDiedEvent (EnemyDiedEvent _) = True
+isEnemyDiedEvent _ = False
 
 newtype UpdateAction a =
   UpdateAction
