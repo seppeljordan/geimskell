@@ -50,7 +50,7 @@ library
                      , process
                      , QuickCheck
                      , random
-                     , reactive-banana
+                     , reactive-banana >= 1.2
                      , sdl2
                      , sdl2-compositor
                      , sdl2-image

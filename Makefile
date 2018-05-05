@@ -1,12 +1,13 @@
 GHC_OPTIONS=--ghc-options=\"-Wall -threaded -fno-warn-missing-signatures\"
-# NIX_PATH=nixpkgs=https://github.com/NixOS/nixpkgs/archive/f338e99039ed4c85b6eae4c5c0e046c3115ffee5.tar.gz
-NIX_SHELL=nix-shell nix/release.nix -A shell --pure
+NIX_PATH=nixpkgs=https://github.com/NixOS/nixpkgs-channels/archive/nixpkgs-unstable.tar.gz
+NIX_SHELL=nix-shell nix/release.nix -A shell
+NIX_SHELL_PURE=nix-shell nix/release.nix -A shell --pure
 
 run:
 	$(NIX_SHELL) --command "exec cabal run"
 
 build:
-	$(NIX_SHELL) --command "exec cabal build"
+	$(NIX_SHELL_PURE) --command "exec cabal build"
 
 release:
 	rm -rf dist/
@@ -16,13 +17,13 @@ shell:
 	$(NIX_SHELL)
 
 configure:
-	$(NIX_SHELL) --command "exec cabal configure $(GHC_OPTIONS)"
+	$(NIX_SHELL_PURE) --command "exec cabal configure $(GHC_OPTIONS)"
 
 haddock:
-	$(NIX_SHELL) --command "exec cabal haddock --executable"
+	$(NIX_SHELL_PURE) --command "exec cabal haddock --executable"
 
 test:
-	$(NIX_SHELL) --command "exec cabal test"
+	$(NIX_SHELL_PURE) --command "exec cabal test"
 
 update-htiled:
 	cabal2nix https://github.com/seppeljordan/htiled.git > \
