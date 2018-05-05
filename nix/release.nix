@@ -9,7 +9,7 @@ rec {
   shell = release.env.overrideAttrs( old: {
     shellHook = old.shellHook + ''
       # We need cabal-install to be available
-      PATH=${pkgs.cabal-install}/bin:$PATH
+      PATH=${pkgs.cabal-install}/bin:${pkgs.csound}/bin:$PATH
     '';
   });
 }
