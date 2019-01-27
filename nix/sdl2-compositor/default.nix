@@ -7,8 +7,9 @@ mkDerivation {
   version = "1.2.0.7";
   src = fetchgit {
     url = "https://github.com/seppeljordan/sdl2-compositor.git";
-    sha256 = "053p4ni4wr2iw1a82w3413vl03833pdfx9bqgag1h83p73vwg8iz";
-    rev = "510fd8400cb148001e07f759fae18fa33330ea0b";
+    sha256 = "04fqhzf0z0a0j7cc8yhqklpx3xijq1hsrpwah1520q83lbas16g4";
+    rev = "a0e6f0bf9b3b8a19202ec798feb21ddb64affd66";
+    fetchSubmodules = true;
   };
   isLibrary = true;
   isExecutable = true;

@@ -42,11 +42,7 @@ update-sdl2-compositor:
 	cabal2nix https://github.com/seppeljordan/sdl2-compositor.git > \
 		nix/sdl2-compositor/default.nix
 
-update-lrucache:
-	cabal2nix https://github.com/seppeljordan/lrucache.git > \
-		nix/lrucache/default.nix
-
-update-deps: update-htiled update-sdl2-compositor update-lrucache
+update-deps: update-htiled update-sdl2-compositor
 
 update-geimskell:
 	cd nix && cabal2nix .. > geimskell.nix

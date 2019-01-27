@@ -39,9 +39,8 @@ data Output =
          , outputRequestsQuit :: RB.Event ()
          }
 
-instance Monoid Output where
-  mempty = Output mempty mempty mempty mempty
-  mappend a b = Output
+instance Semigroup Output where
+  a <> b = Output
     { outputImage = mappend (outputImage a) (outputImage b)
     , outputRenderTick =
         mappend (outputRenderTick a) (outputRenderTick b)
@@ -50,6 +49,9 @@ instance Monoid Output where
     , outputRequestsQuit =
         mappend (outputRequestsQuit a) (outputRequestsQuit b)
     }
+
+instance Monoid Output where
+  mempty = Output mempty mempty mempty mempty
 
 data EngineInputs = EngineInputs { inputSdlEvents :: RB.Event EventPayload
                                  , inputTimeEvents :: RB.Event Word32
@@ -259,11 +261,15 @@ instance Applicative Tidings where
     )
     ( funB <*> xB )
 
+instance (Semigroup a) => Semigroup (Tidings a) where
+  t1 <> t2 =
+    (<>) <$> t1 <*> t2
+
 instance Monoid a => Monoid (Tidings a) where
   mempty = tidings never (pure mempty)
-  mappend t1 t2 =
-    mappend <$> t1 <*> t2
+
+instance Semigroup a => Semigroup (Behavior a) where
+  a <> b = (<>) <$> a <*> b
 
 instance Monoid a => Monoid (Behavior a) where
-  mappend a b = mappend <$> a <*> b
   mempty = pure mempty
