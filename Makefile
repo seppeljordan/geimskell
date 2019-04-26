@@ -4,16 +4,16 @@ NIX_SHELL=nix-shell nix/release.nix -A shell
 NIX_SHELL_PURE=nix-shell nix/release.nix -A shell --pure
 
 run:
-	$(NIX_SHELL) --command "exec cabal run -- --sound-engine csound"
+	$(NIX_SHELL) --command "exec cabal v1-run -- --sound-engine csound"
 
 run-profiling:
-	$(NIX_SHELL) --command "exec cabal run -- --sound-engine csound +RTS  -p -hc -sgeimskell.summary"
+	$(NIX_SHELL) --command "exec cabal v1-run -- --sound-engine csound +RTS  -p -hc -sgeimskell.summary"
 
 run-nosound:
-	$(NIX_SHELL) --command "exec cabal run -- --sound-engine none"
+	$(NIX_SHELL) --command "exec cabal v1-run -- --sound-engine none"
 
 build:
-	$(NIX_SHELL_PURE) --command "exec cabal build"
+	$(NIX_SHELL_PURE) --command "exec cabal v1-build"
 
 release:
 	rm -rf dist/
