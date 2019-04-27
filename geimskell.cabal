@@ -25,6 +25,7 @@ library
                  , Camera
                  , Enemy
                  , Geimskell.Options
+                 , Geimskell.Render
                  , Geimskell.WorldState
                  , Geometry
                  , Paths_geimskell

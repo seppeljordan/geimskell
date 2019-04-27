@@ -30,6 +30,7 @@ import           System.Random
 import           Camera
 import           Enemy
 import           Geimskell.Options
+import           Geimskell.Render
 import           Geimskell.WorldState
 import           Geometry
 import           Random
@@ -101,13 +102,12 @@ gameplay pauseB restartE = mdo
     projectilesB = wsProjectiles <$> worldStateB
     playerB = wsPlayer <$> worldStateB
     cameraB = wsCamera <$> worldStateB
-    worldObjectImages = renderWorldState <$> (camPosition <$> cameraB) <*> worldStateB
-    stageImage = renderStage <$>
+    worldObjectImages = renderImage <$> (camPosition <$> cameraB) <*> worldStateB
+    stageImage = renderImage <$>
                  (camPosition <$> cameraB) <*>
                  pure stage
     outputImage =
-      stageImage <>
-      (fromRelativeCompositor (fromIntegral <$> L.V2 screenWidth screenHeight) <$> worldObjectImages)
+      stageImage <> worldObjectImages
     outputSounds = unionWith (++)
       ([SoundShoot] <$ shootE)
       ([SoundExplosion] <$ explosionE)
@@ -216,10 +216,6 @@ menu = mdo
       }
   return $ menuOutput
 
-red = rgba 255 0 0 255
-blue = rgba 0 0 255 255
-green = rgba 0 255 0 255
-
 main = do
   getOptions >>= \case
     Left msg -> putStrLn msg
@@ -290,18 +286,6 @@ instance Traversable Box4 where
   traverse fun (Box4 a b c d) =
     Box4 <$> fun a <*> fun b <*> fun c <*> fun d
 
-renderRectangle :: Color -> Rectangle -> ResIndependentImage
-renderRectangle col rect =
-  translateR offset (filledRectangleR (L.V2 width height) col)
-  where
-    width = abs $ (pointX . rectangleA $ rect) - (pointX . rectangleB $ rect)
-    height = abs $ (pointY . rectangleA $ rect) - (pointY . rectangleB $ rect)
-    offset =
-      L.V2
-      (avg (pointX . rectangleA $ rect) (pointX . rectangleB $ rect))
-      (avg (pointY . rectangleA $ rect) (pointY . rectangleB $ rect))
-    avg a b = (a+b)/2
-
 translateRVector :: Vector
                  -> (ResIndependentImage -> ResIndependentImage)
 translateRVector = translateR . vectorToV2
@@ -312,55 +296,9 @@ vectorToV2 v = L.V2 x y
     y = pointY v
 v2ToVector (L.V2 x y) = makeVector x y
 
-renderWorldState xPosition worldstate =
-  outputImage
-  where
-    player = wsPlayer worldstate
-    projectiles = wsProjectiles worldstate
-    enemies = wsEnemies worldstate
-    spaceshipGraphics = renderRectangle blue $ playerShipRectangle player
-    projectilesImage =
-      mconcat . map (renderRectangle red . projectileRect) $
-      projectiles
-    enemiesImage =
-      mconcat . map (renderRectangle green) $
-      enemies
-    outputImage =
-      translateR (L.V2 (-xPosition) 0) .
-      translateR (L.V2 0.5 0.5) .
-      flipC (L.V2 False True) $
-      ( enemiesImage <>
-        projectilesImage <>
-        spaceshipGraphics
-      )
-
 worldStateGameOver worldstate =
   (== HealthEmpty) . playerHealth . wsPlayer $ worldstate
 
-renderStage :: Number -> Stage -> Image
-renderStage camPosition stage =
-  mconcat . fmap makeImage . filter onScreen . assocs $ (stageData stage)
-  where
-    camPositionAbsolute = round $ camPosition * 600
-    tileWidth = 32 :: Int
-    tileHeight = 32 :: Int
-    relativeWidth = 1/fromIntegral tileWidth :: Number
-    makeImage (_,Nothing) = mempty
-    makeImage ((x,y), Just tile) =
-      ( translateA
-        ( L.V2
-          (x * tileWidth - camPositionAbsolute)
-          (y * tileHeight + tileHeight `div` 2)
-        )
-      ) $
-      sizedA (L.V2 tileWidth tileHeight) (tileTexture tile)
-    onScreen ((gridXPos,_),_) =
-      -- gridXPos is just the position in the tilegrid and has nothing
-      -- to do with the actual position on the screen
-      x * relativeWidth > camPosition - 2 &&
-      x * relativeWidth < camPosition + 2
-      where
-        x = fromIntegral gridXPos
 
 combineWorldState :: WorldState
                   -> Behavior Bool

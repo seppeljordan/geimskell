@@ -7,7 +7,7 @@ import Reactive
 import Geometry
 import Random
 
-type Enemy = Rectangle
+newtype Enemy = Enemy { fromEnemy :: Rectangle }
 
 enemySpeed = 0.6 -- per second
 
@@ -38,11 +38,13 @@ makeEnemies spawnXPosition spawnTicksE timeDeltaE = do
         moveDistance :: Number
         moveDistance = enemySpeed * 0.001 * 0.001 * fromIntegral timeDelta
       in
-      flip translateRectangle (makeVector (- moveDistance) 0)
+        Enemy .
+        flip translateRectangle (makeVector (- moveDistance) 0) .
+        fromEnemy
     pointToEnemy v =
       let x = pointX v
           y = pointY v
-      in makeRectangle
+      in Enemy $ makeRectangle
          (makeVector (x - 0.1) (y - 0.1))
          (makeVector (x + 0.1) (y + 0.1))
   return $ changeEnemies

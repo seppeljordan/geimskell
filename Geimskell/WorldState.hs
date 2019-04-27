@@ -135,7 +135,7 @@ updateEnemiesW updateEnemies = do
   let
     (_, newEnemies) =
       partition
-      (outOfBounds (wsCamera oldWS))
+      (outOfBounds (wsCamera oldWS) . fromEnemy)
       (updateEnemies . wsEnemies $ oldWS)
   putWorldState oldWS { wsEnemies = newEnemies}
   handleEnemyProjectileCollisions
@@ -149,11 +149,11 @@ handleEnemyProjectileCollisions = do
     enemies = wsEnemies ws
     projectiles = wsProjectiles ws
     (destroyedEnemies, newEnemies) =
-      partition isProjectileCollision enemies
+      partition (isProjectileCollision . fromEnemy) enemies
     (destroyedProjectiles, newProjectiles) =
       partition (isEnemyCollision . projectileRect) projectiles
     isEnemyCollision r =
-      or . fmap (rectanglesOverlap r) $ enemies
+      or . fmap (rectanglesOverlap r . fromEnemy) $ enemies
     isProjectileCollision r =
       or . fmap (rectanglesOverlap r . projectileRect) $ projectiles
   tellEvents $ fmap EnemyDiedEvent destroyedEnemies
@@ -169,7 +169,7 @@ handlePlayerEnemyCollisions = do
     player = wsPlayer ws
     (hitEnemies, nonHitEnemies) =
       partition
-      (rectanglesOverlap $ playerShipRectangle player)
+      (rectanglesOverlap (playerShipRectangle player) . fromEnemy)
       (wsEnemies ws)
     newPlayer = if null hitEnemies
                 then player
