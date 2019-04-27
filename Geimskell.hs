@@ -18,6 +18,7 @@ import           Data.Monoid
 import qualified Data.Set as Set
 import           Data.Tuple
 import           GHC.Generics
+import           GHC.Word
 import qualified Linear.V2 as L
 import           Reactive.Banana as RB hiding ((<>))
 import           SDL hiding (Rectangle, Vector, trace)
@@ -52,22 +53,11 @@ gameplay pauseB restartE = mdo
     =<< stepper (pure 0) (rumors directionT)
   let
     shootCooldown = pure $ 500 * 1000
-    shootTriggerE =
+    shootTriggerE = void $
       filterJust . fmap (buttonPressEvent ScancodeSpace) $
       keyboardE
-  shootTriggerB <- stepper False shootTriggerE
-  shootE <-
-    whenE (not <$> pauseB) . filterJust . fst <$> mapAccum 0
-    ( (\ (cooldown, tryShoot) cooldownTimer' ->
-          let
-            cooldownTimer = min
-                            (cooldownTimer' + delta) (cooldown + delta)
-          in
-            if tryShoot && cooldownTimer >= cooldown
-            then (Just (), cooldownTimer - cooldown)
-            else (Nothing, cooldownTimer)
-      ) <$>
-      ((,) <$> shootCooldown <*> shootTriggerB <@ ticks))
+  (shootE :: RB.Event (), shootCooldowntimer :: RB.Behavior Word32) <-
+    cooldownTimer shootCooldown shootTriggerE
   transformEnemiesE <- makeEnemies (camPosition <$> cameraB) (void spawnTicks) ticks
   let
     projectilesT =

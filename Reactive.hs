@@ -1,9 +1,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Reactive where
 
 import Control.Concurrent.STM.TVar
+import Data.Tuple
 import Control.DeepSeq
 import Control.Monad.Fix
 import Control.Monad.STM
@@ -58,6 +60,52 @@ data EngineInputs = EngineInputs { inputSdlEvents :: RB.Event EventPayload
                                  , inputWindowSizeEvents :: RB.Event (SDL.V2 CInt)
                                  , inputStage :: Stage
                                  }
+
+cooldownTimer :: forall a.
+                 RB.Behavior Word32 -- Timer duration in MicroSeconds
+              -> RB.Event a
+              -> Game (RB.Event a, RB.Behavior Word32)
+cooldownTimer cooldownTimeB triggerE = do
+  ticksInMillisecondsE <- askTicksInMilliseconds
+  let
+    updateTimerState :: Word32 -> Word32 -> [Either Word32 a] -> State [a] Word32
+    updateTimerState
+      cooldownTimer
+      accuInMicroSeconds
+      (Left tickInMilliseconds : xs)
+      = updateTimerState
+        cooldownTimer
+        (min (accuInMicroSeconds + tickInMilliseconds * 1000) cooldownTimer)
+        xs
+    updateTimerState
+      cooldownTimer
+      accuInMicroSeconds
+      (Right triggerValue : xs)
+      = if accuInMicroSeconds >= cooldownTimer
+        then modify (++ [triggerValue]) >> updateTimerState cooldownTimer 0 xs
+        else updateTimerState
+             cooldownTimer
+             accuInMicroSeconds
+             xs
+    updateTimerState
+      cooldownTimer
+      accuInMicroSeconds
+      ([])
+      = return accuInMicroSeconds
+    updateE :: RB.Event (Word32 -> (Maybe a, Word32))
+    updateE =
+      let
+        triggerOrUpdateEvents :: RB.Event [Either Word32 a]
+        triggerOrUpdateEvents = unionWith (++)
+                                ((pure . Left) <$> ticksInMillisecondsE)
+                                ((pure . Right) <$> triggerE)
+      in ((\ cooldownTime events accu ->
+            swap . fmap listToMaybe $
+            runState (updateTimerState cooldownTime accu events) []
+         ) <$> cooldownTimeB) <@> triggerOrUpdateEvents
+
+  (maybeEventsE, timerB) <- mapAccum 0 updateE
+  return (RB.filterJust maybeEventsE, timerB)
 
 runNetworkWithOptions :: Text
                       -> Game Output
@@ -186,13 +234,18 @@ filterRepeats ev = do
     ) <$> ev
   return $ filterJust maybeEvents
 
+askTicksInMilliseconds :: Game (RB.Event Word32)
+askTicksInMilliseconds = lift . GameNetwork $ asks inputTimeEvents
+
 -- | generateTicks takes as its argument the desired interval in micro
 -- seconds.  60 FPS would be something like
 --
 -- > sixtyFPS <- generateTicks (pure 16666)
-generateTicks :: (Integral i) => Behavior i -> Game (RB.Event i)
+generateTicks :: (Integral i)
+              => Behavior i
+              -> Game (RB.Event i)
 generateTicks deltaB = do
-  timeE <- lift . GameNetwork $ asks inputTimeEvents
+  ticksInMillisecondsE <- askTicksInMilliseconds
   lift . fmap (filterJust . fst) $
     mapAccum
     0
@@ -204,7 +257,7 @@ generateTicks deltaB = do
            if accu > delta
            then (Just delta, accu - delta)
            else (Nothing, accu)
-      ) <$> ((,) <$> deltaB <@> timeE)
+      ) <$> ((,) <$> deltaB <@> ticksInMillisecondsE)
     )
 
 gameStage :: Game Stage

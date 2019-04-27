@@ -6,3 +6,4 @@
 *.hp
 *.prof
 *.summary
+/dist-newstyle/

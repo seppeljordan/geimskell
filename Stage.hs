@@ -6,6 +6,7 @@ module Stage ( Stage
              , stageAssetCache
              , stageData
              , loadStage
+             , emptyStage
              )
 where
 
@@ -111,3 +112,11 @@ texturesFromTileData
 
 isTileLayer (Layer {layerContents = (LayerContentsTiles _)}) = True
 isTileLayer _ = False
+
+emptyStage =
+  Stage
+  { stageWidth = 0
+  , stageHeight = 0
+  , stageData = listArray ((0,0), (0,0)) []
+  , stageAssetCache = emptyAssetCache
+  }
