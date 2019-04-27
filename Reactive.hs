@@ -62,11 +62,14 @@ data EngineInputs = EngineInputs { inputSdlEvents :: RB.Event EventPayload
                                  }
 
 cooldownTimer :: forall a.
-                 RB.Behavior Word32 -- Timer duration in MicroSeconds
+                 RB.Behavior Bool
+              -> RB.Behavior Word32 -- Timer duration in MicroSeconds
               -> RB.Event a
               -> Game (RB.Event a, RB.Behavior Word32)
-cooldownTimer cooldownTimeB triggerE = do
-  ticksInMillisecondsE <- askTicksInMilliseconds
+cooldownTimer cooldownActiveB cooldownTimeB triggerE = do
+  ticksInMillisecondsE <-
+    filterApply (const <$> cooldownActiveB) <$>
+    askTicksInMilliseconds
   let
     updateTimerState :: Word32 -> Word32 -> [Either Word32 a] -> State [a] Word32
     updateTimerState

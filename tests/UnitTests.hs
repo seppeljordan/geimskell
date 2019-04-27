@@ -71,8 +71,9 @@ main = do
         randomSeed <- newStdGen
         let
           cooldownTime = pure 1000 * 1000 -- 1 second
+          cooldownActiveB = pure True
           network triggerE =
-            fst <$> cooldownTimer cooldownTime triggerE
+            fst <$> cooldownTimer cooldownActiveB cooldownTime triggerE
           events = [ TestTimeInputEvent 100
                    , TestValueEvent 1
                    , TestTimeInputEvent 100
@@ -81,3 +82,16 @@ main = do
                    , TestValueEvent 3
                    ]
         interpret randomSeed emptyStage network events >>= flip shouldBe [3]
+      it "does not trigger when it is not active" $ do
+        randomSeed <- newStdGen
+        let
+          cooldownTimeB = pure 1000 * 1000
+          cooldownActiveB = pure False
+          network triggerE =
+            fst <$> cooldownTimer cooldownActiveB cooldownTimeB triggerE
+          events = [ TestTimeInputEvent 1000
+                   , TestValueEvent 1
+                   , TestTimeInputEvent 1000
+                   , TestValueEvent 2
+                   ]
+        interpret randomSeed emptyStage network events >>= flip shouldBe []

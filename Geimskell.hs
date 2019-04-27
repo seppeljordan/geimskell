@@ -57,7 +57,10 @@ gameplay pauseB restartE = mdo
       filterJust . fmap (buttonPressEvent ScancodeSpace) $
       keyboardE
   (shootE :: RB.Event (), shootCooldowntimer :: RB.Behavior Word32) <-
-    cooldownTimer shootCooldown shootTriggerE
+    cooldownTimer
+    (not <$> gameStopB)
+    shootCooldown
+    (filterApply (const . not <$> gameStopB) shootTriggerE)
   transformEnemiesE <- makeEnemies (camPosition <$> cameraB) (void spawnTicks) ticks
   let
     projectilesT =
