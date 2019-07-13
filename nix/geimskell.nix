@@ -10,6 +10,7 @@ mkDerivation {
   src = ./..;
   isLibrary = true;
   isExecutable = true;
+  enableSeparateDataOutput = true;
   libraryHaskellDepends = [
     array base containers csound-expression deepseq directory hosc
     htiled lens linear mtl prelude-safeenum process QuickCheck random
@@ -17,6 +18,9 @@ mkDerivation {
     transformers vector
   ];
   executableHaskellDepends = [ base ];
-  testHaskellDepends = [ base hspec htiled QuickCheck ];
+  testHaskellDepends = [
+    base hspec htiled QuickCheck random reactive-banana sdl2
+    transformers
+  ];
   license = stdenv.lib.licenses.gpl3;
 }

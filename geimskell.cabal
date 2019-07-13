@@ -26,13 +26,13 @@ library
                  , Enemy
                  , Geimskell.Options
                  , Geimskell.Render
+                 , Geimskell.Sound
                  , Geimskell.WorldState
                  , Geometry
                  , Paths_geimskell
                  , Random
                  , Reactive
                  , Shoot
-                 , Sound
                  , Spaceship
                  , Stage
                  , TileSet

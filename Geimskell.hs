@@ -31,12 +31,12 @@ import           Camera
 import           Enemy
 import           Geimskell.Options
 import           Geimskell.Render
+import           Geimskell.Sound
 import           Geimskell.WorldState
 import           Geometry
 import           Random
 import           Reactive
 import           Shoot
-import           Sound
 import           Spaceship
 import           Stage
 import           TileSet

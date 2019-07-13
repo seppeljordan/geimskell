@@ -25,7 +25,7 @@ import SDL.Compositor.ResIndependent
 import System.Random as Rand
 
 import Geimskell.Options
-import Sound
+import Geimskell.Sound
 import Stage
 import TileSet
 
