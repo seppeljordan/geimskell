@@ -1,4 +1,11 @@
-module Geimskell.Render where
+module Geimskell.Render
+  ( HasImage (..)
+  , renderRectangle
+  , red
+  , blue
+  )
+
+where
 
 import           Data.Array
 import           Enemy
@@ -13,6 +20,7 @@ import           Spaceship
 import           Stage
 import           TileSet
 
+red, blue, green :: Color
 red = rgba 255 0 0 255
 blue = rgba 0 0 255 255
 green = rgba 0 255 0 255
@@ -104,9 +112,9 @@ instance HasImage Enemy where
   renderImage = fromResolutionIndependent
 
 instance HasResolutionIndependentImage WorldState where
-  renderResolutionIndependentImage xPosition worldstate = outputImage
+  renderResolutionIndependentImage xPosition worldstate = image
     where
-      outputImage =
+      image =
         (renderResolutionIndependentImage xPosition . wsEnemies $ worldstate) <>
         (renderResolutionIndependentImage xPosition . wsProjectiles $ worldstate) <>
         (renderResolutionIndependentImage xPosition . wsPlayer $ worldstate)

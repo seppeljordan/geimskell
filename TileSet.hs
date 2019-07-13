@@ -1,6 +1,18 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-module TileSet where
+module TileSet
+  ( AssetCache
+  , GraphicsLoading
+  , GameTile(..)
+  , emptyAssetCache
+  , printMsg
+  , liftMaybe
+  , tileLookupMap
+  , runGraphicsLoading
+  , destroyAssetCache
+  )
+
+where
 
 import           Control.DeepSeq
 import           Control.Exception
@@ -13,27 +25,15 @@ import qualified Data.Map.Lazy as MapL
 import qualified Data.Map.Strict as MapS
 import           Data.Maybe
 import           Data.StateVar hiding (get)
-import           Data.Tiled
+import           Data.Tiled hiding (tileset)
+import           Data.Word
 import qualified SDL
 import           SDL.Image as SDL
-
-import           Debug.Trace
-
-traceMap f x = trace (show . f $ x) x
 
 data AssetCache =
   AssetCache { acSpriteMaps :: MapS.Map FilePath SDL.Texture
              , acSprites :: MapS.Map TextureKey SDL.Texture
              }
-
-emptyAssetCache = AssetCache {..}
-  where
-    acSprites = mempty
-    acSpriteMaps = mempty
-
-destroyAssetCache cache =
-  mapM_ SDL.destroyTexture (acSprites cache) >>
-  mapM_ SDL.destroyTexture (acSpriteMaps cache)
 
 data TextureKey = TextureKey { tkPath :: FilePath
                              , tkOffset :: (Int,Int)
@@ -41,9 +41,25 @@ data TextureKey = TextureKey { tkPath :: FilePath
                              }
   deriving (Show,Read,Eq,Ord)
 
-type TextureCache = MapS.Map TextureKey SDL.Texture
-
 type GraphicsLoading = ExceptT String (StateT AssetCache IO)
+
+data GameTile = GameTile { tileSolid :: Bool
+                         , tileTexture :: SDL.Texture
+                         }
+
+instance NFData GameTile where
+  rnf t = tileSolid t `seq` t `seq` ()
+
+emptyAssetCache :: AssetCache
+emptyAssetCache = AssetCache {..}
+  where
+    acSprites = mempty
+    acSpriteMaps = mempty
+
+destroyAssetCache :: MonadIO m => AssetCache -> m ()
+destroyAssetCache cache =
+  mapM_ SDL.destroyTexture (acSprites cache) >>
+  mapM_ SDL.destroyTexture (acSpriteMaps cache)
 
 runGraphicsLoading :: AssetCache
                    -> GraphicsLoading a
@@ -73,24 +89,24 @@ loadTextureThroughCache renderer path = do
     Just tex -> return tex
   where
     loadTextureFromPath :: FilePath -> IO (Either String SDL.Texture)
-    loadTextureFromPath path = catch
-      (Right <$> SDL.loadTexture renderer path)
+    loadTextureFromPath loadPath = catch
+      (Right <$> SDL.loadTexture renderer loadPath)
       (\ (e :: SomeException) -> return . Left . show $ e)
     processErrorMessage :: FilePath
                         -> Either String a
                         -> GraphicsLoading a
-    processErrorMessage path (Left msg) =
+    processErrorMessage loadPath (Left msg) =
       throwError $ unlines
-      [ "Something went wrong while loading a texture from: "++path
+      [ "Something went wrong while loading a texture from: "++loadPath
       , "Full error message below ..."
       , msg
       , "... end of error message"
       ]
-    processErrorMessage path (Right val) = do
-      printMsg $ "Loaded texture from: "++path
+    processErrorMessage loadPath (Right val) = do
+      printMsg $ "Loaded texture from: " ++ loadPath
       return val
 
-
+loadTextureKey :: SDL.Renderer -> TextureKey -> GraphicsLoading SDL.Texture
 loadTextureKey renderer key = do
   tilesetTexture <- loadTextureThroughCache renderer (tkPath key)
   cache <- lift get
@@ -118,13 +134,7 @@ loadTextureKey renderer key = do
         (SDL.V2 (fst . tkOffset $ key) (snd . tkOffset $ key)))
       (SDL.V2 (fst . tkDims $ key) (snd . tkDims $ key))
 
-data GameTile = GameTile { tileSolid :: Bool
-                         , tileTexture :: SDL.Texture
-                         }
-
-instance NFData GameTile where
-  rnf t = tileSolid t `seq` t `seq` ()
-
+tileLookupMap :: SDL.Renderer -> TiledMap -> GraphicsLoading (MapS.Map Word32 GameTile)
 tileLookupMap renderer =
   foldM addTileSetToMap MapL.empty .
   mapTilesets
@@ -161,5 +171,6 @@ tileLookupMap renderer =
                             }
       return $ MapL.insert gid gametile tilemap
 
+liftMaybe :: String -> Maybe a -> GraphicsLoading a
 liftMaybe _ (Just x) = return x
 liftMaybe msg Nothing = throwError msg

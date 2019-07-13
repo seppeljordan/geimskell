@@ -1,4 +1,4 @@
-GHC_OPTIONS=--ghc-options=\"-Wall -threaded -fno-warn-missing-signatures\"
+GHC_OPTIONS=--ghc-options=\"-Wall -Werror -threaded\"
 NIX_PATH=nixpkgs=https://github.com/NixOS/nixpkgs-channels/archive/nixpkgs-unstable.tar.gz
 NIX_SHELL=nix-shell nix/release.nix -A shell
 NIX_SHELL_PURE=nix-shell nix/release.nix -A shell --pure

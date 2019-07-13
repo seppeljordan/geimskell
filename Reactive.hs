@@ -2,7 +2,31 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Reactive where
+module Reactive
+  ( Tidings
+  , Game
+  , Tick
+  , Image
+  , ResIndependentImage
+  , Output(..)
+  , EngineInputs (..)
+  , GameNetwork (..)
+  , RandomNetwork (..)
+  , tidings
+  , randomGenerator
+  , screenWidth
+  , screenHeight
+  , unionsWith
+  , buttonPressEvent
+  , keyboardEvents
+  , runNetworkWithOptions
+  , facts
+  , rumors
+  , cooldownTimer
+  , generateTicks
+  , gameStage
+  )
+where
 
 import Control.Concurrent.STM.TVar
 import Data.Tuple
@@ -43,7 +67,7 @@ data Output =
 
 instance Semigroup Output where
   a <> b = Output
-    { outputImage = mappend (outputImage a) (outputImage b)
+    { outputImage = mappend <$> (outputImage a) <*> (outputImage b)
     , outputRenderTick =
         mappend (outputRenderTick a) (outputRenderTick b)
     , outputSounds =
@@ -53,13 +77,37 @@ instance Semigroup Output where
     }
 
 instance Monoid Output where
-  mempty = Output mempty mempty mempty mempty
+  mempty = Output (pure mempty) never never never
 
 data EngineInputs = EngineInputs { inputSdlEvents :: RB.Event EventPayload
                                  , inputTimeEvents :: RB.Event Word32
                                  , inputWindowSizeEvents :: RB.Event (SDL.V2 CInt)
                                  , inputStage :: Stage
                                  }
+
+data Tidings a = Tidings { rumors :: RB.Event a
+                         , facts :: Behavior a
+                         }
+
+instance Functor Tidings where
+  fmap fun t = tidings (fmap fun $ rumors t) (fmap fun $ facts t)
+
+instance Applicative Tidings where
+  pure x = tidings never (pure x)
+  (Tidings funE funB) <*> (Tidings xE xB) = tidings
+    ( uncurry ($) <$> unionWith
+      (\ (f,_) (_,x) -> (f,x))
+      ( flip (,) <$> xB <@> funE )
+      ( (,) <$> funB <@> xE )
+    )
+    ( funB <*> xB )
+
+instance (Semigroup a) => Semigroup (Tidings a) where
+  t1 <> t2 =
+    (<>) <$> t1 <*> t2
+
+instance Monoid a => Monoid (Tidings a) where
+  mempty = tidings never (pure mempty)
 
 cooldownTimer :: forall a.
                  RB.Behavior Bool
@@ -73,25 +121,25 @@ cooldownTimer cooldownActiveB cooldownTimeB triggerE = do
   let
     updateTimerState :: Word32 -> Word32 -> [Either Word32 a] -> State [a] Word32
     updateTimerState
-      cooldownTimer
+      cooldownTime
       accuInMicroSeconds
       (Left tickInMilliseconds : xs)
       = updateTimerState
-        cooldownTimer
-        (min (accuInMicroSeconds + tickInMilliseconds * 1000) cooldownTimer)
+        cooldownTime
+        (min (accuInMicroSeconds + tickInMilliseconds * 1000) cooldownTime)
         xs
     updateTimerState
-      cooldownTimer
+      cooldownTime
       accuInMicroSeconds
       (Right triggerValue : xs)
-      = if accuInMicroSeconds >= cooldownTimer
-        then modify (++ [triggerValue]) >> updateTimerState cooldownTimer 0 xs
+      = if accuInMicroSeconds >= cooldownTime
+        then modify (++ [triggerValue]) >> updateTimerState cooldownTime 0 xs
         else updateTimerState
-             cooldownTimer
+             cooldownTime
              accuInMicroSeconds
              xs
     updateTimerState
-      cooldownTimer
+      _
       accuInMicroSeconds
       ([])
       = return accuInMicroSeconds
@@ -194,9 +242,7 @@ runNetwork title action server gameRendererType = do
   eventLoop
   destroyAssetCache (stageAssetCache inputStage)
 
-reactimate :: RB.Event (IO ()) -> Game ()
-reactimate = lift . lift . RB.reactimate
-
+screenWidth, screenHeight :: CInt
 screenWidth = 1360
 screenHeight = 768
 
@@ -212,6 +258,7 @@ keyboardEvents =
     filterKeyboardEvents (KeyboardEvent ev) = Just ev
     filterKeyboardEvents _ = Nothing
 
+buttonPressEvent :: Scancode -> KeyboardEventData -> Maybe Bool
 buttonPressEvent
   desiredScancode
   (KeyboardEventData { keyboardEventRepeat = is_repeat
@@ -222,20 +269,10 @@ buttonPressEvent
   | is_repeat = Nothing
   | otherwise = Just (keymotion == Pressed)
 
+unionsWith :: (a -> a -> a) -> [RB.Event a] -> RB.Event a
 unionsWith _ [] = never
 unionsWith _ [x] = x
 unionsWith fun (x:xs) = unionWith fun x (unionsWith fun xs)
-
-filterRepeats ev = do
-  (maybeEvents, _) <- mapAccum Nothing $
-    (\ x ->
-       maybe
-       (Just x, Just x)
-       (\ y -> if x == y
-               then (Nothing, Just y)
-               else (Just x, Just x))
-    ) <$> ev
-  return $ filterJust maybeEvents
 
 askTicksInMilliseconds :: Game (RB.Event Word32)
 askTicksInMilliseconds = lift . GameNetwork $ asks inputTimeEvents
@@ -298,34 +335,6 @@ instance MonadMoment m => MonadMoment (RandomNetwork m) where
 
 type Game = RandomNetwork (GameNetwork MomentIO)
 
-data Tidings a = Tidings { rumors :: RB.Event a
-                         , facts :: Behavior a
-                         }
-
+tidings :: RB.Event a -> Behavior a -> Tidings a
 tidings = Tidings
 
-instance Functor Tidings where
-  fmap fun t = tidings (fmap fun $ rumors t) (fmap fun $ facts t)
-
-instance Applicative Tidings where
-  pure x = tidings never (pure x)
-  (Tidings funE funB) <*> (Tidings xE xB) = tidings
-    ( uncurry ($) <$> unionWith
-      (\ (f,_) (_,x) -> (f,x))
-      ( flip (,) <$> xB <@> funE )
-      ( (,) <$> funB <@> xE )
-    )
-    ( funB <*> xB )
-
-instance (Semigroup a) => Semigroup (Tidings a) where
-  t1 <> t2 =
-    (<>) <$> t1 <*> t2
-
-instance Monoid a => Monoid (Tidings a) where
-  mempty = tidings never (pure mempty)
-
-instance Semigroup a => Semigroup (Behavior a) where
-  a <> b = (<>) <$> a <*> b
-
-instance Monoid a => Monoid (Behavior a) where
-  mempty = pure mempty

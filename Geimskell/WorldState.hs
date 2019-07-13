@@ -28,7 +28,6 @@ import Control.Monad.Trans
 import Control.Monad.Trans.State
 import Control.Monad.Trans.Writer
 import Data.List
-import Data.Maybe
 import GHC.Generics
 
 import Camera
@@ -83,20 +82,14 @@ instance Monad UpdateAction where
 modifyWorldState :: (WorldState -> WorldState) -> UpdateAction ()
 modifyWorldState f = UpdateAction $ modify f
 
+putWorldState :: WorldState -> UpdateAction ()
 putWorldState ws = UpdateAction $ put ws
 
+getWorldState :: UpdateAction WorldState
 getWorldState = UpdateAction $ get
 
-tellEvent :: WorldUpdateEvent -> UpdateAction ()
-tellEvent e = UpdateAction . lift . tell $ [e]
-
+tellEvents :: [WorldUpdateEvent] -> UpdateAction ()
 tellEvents = UpdateAction . lift . tell
-
-getProjectileDestroyedEvent :: WorldUpdateEvent -> Maybe Projectile
-getProjectileDestroyedEvent (ProjectileDestroyedEvent p) = Just p
-getProjectileDestroyedEvent _ = Nothing
-
-isProjectileDestroyedEvent = isJust . getProjectileDestroyedEvent
 
 outOfBounds :: Camera -> Rectangle -> Bool
 outOfBounds camera rect =
@@ -187,6 +180,7 @@ updatePlayerW screenWidth f = do
   handlePlayerBorders screenWidth
   handlePlayerEnemyCollisions
 
+handlePlayerBorders :: Number -> UpdateAction ()
 handlePlayerBorders screenWidth = do
   ws <- getWorldState
   let

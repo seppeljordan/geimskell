@@ -1,4 +1,10 @@
-module Enemy where
+module Enemy
+  ( Enemy
+  , fromEnemy
+  , makeEnemies
+  )
+
+where
 
 import Reactive.Banana
 import System.Random
@@ -9,6 +15,7 @@ import Random
 
 newtype Enemy = Enemy { fromEnemy :: Rectangle }
 
+enemySpeed :: Number
 enemySpeed = 0.6 -- per second
 
 makeEnemies :: Behavior Number

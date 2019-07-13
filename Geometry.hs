@@ -23,6 +23,7 @@ instance Ord Vector where
     EQ -> compare (pointY v1) (pointY v2)
     v -> v
 
+makeVector :: Number -> Number -> Vector
 makeVector = Vector
 
 vectorMidpoint :: Vector -> Vector -> Vector
@@ -50,6 +51,7 @@ instance Ord Rectangle where
       EQ -> compare (rectangleB r1) (rectangleB r2)
       v -> v
 
+makeRectangle :: Vector -> Vector -> Rectangle
 makeRectangle (Vector ax ay) (Vector bx by) =
   Rectangle
   (Vector (min ax bx) (min ay by))
@@ -59,8 +61,10 @@ translateRectangle :: Rectangle -> Vector -> Rectangle
 translateRectangle (Rectangle a b) v =
   Rectangle (a `vectorAdd` v) (b `vectorAdd` v)
 
+rectangleMidpoint :: Rectangle -> Vector
 rectangleMidpoint (Rectangle v w) = vectorMidpoint v w
 
+rectanglesOverlap :: Rectangle -> Rectangle -> Bool
 rectanglesOverlap
   (Rectangle (Vector vx vy) (Vector wx wy))
   (Rectangle (Vector ax ay) (Vector bx by)) =
@@ -68,10 +72,3 @@ rectanglesOverlap
   where
     xcollision = wx >= ax && bx >= vx
     ycollision = wy >= ay && by >= vy
-
-rectangleHeight :: Rectangle -> Number
-rectangleHeight r =
-  abs $ pointY q - pointY p
-  where
-    p = rectangleA r
-    q = rectangleB r

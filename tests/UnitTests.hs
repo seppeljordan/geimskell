@@ -1,11 +1,10 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Main where
+module Main (main) where
 
 import           Control.Monad.Trans.Reader
 import           Control.Monad.Trans.State
 import           Data.Maybe
-import           Data.Tiled.Types
 import           Foreign.C.Types
 import           GHC.Word
 import           Reactive
@@ -15,23 +14,25 @@ import           SDL
 import           Stage
 import           System.Random
 import           Test.Hspec
-import           Test.QuickCheck
-import           TileSet
 
 data TestEvent a = TestValueEvent a
                  | TestInputEvent EventPayload
                  | TestTimeInputEvent Word32
                  | TestWindowResizeEvent (SDL.V2 CInt)
 
+testEventToMaybeValueEvent :: TestEvent a -> Maybe a
 testEventToMaybeValueEvent (TestValueEvent x) = Just x
 testEventToMaybeValueEvent _ = Nothing
 
+testEventToMaybeInputEvent :: TestEvent a -> Maybe EventPayload
 testEventToMaybeInputEvent (TestInputEvent x) = Just x
 testEventToMaybeInputEvent _ = Nothing
 
+testEventToMaybeTimeInputEvent :: TestEvent a -> Maybe Word32
 testEventToMaybeTimeInputEvent (TestTimeInputEvent x) = Just x
 testEventToMaybeTimeInputEvent _ = Nothing
 
+testEventToMaybeWindowResizeEvent :: TestEvent a -> Maybe (V2 CInt)
 testEventToMaybeWindowResizeEvent (TestWindowResizeEvent x) = Just x
 testEventToMaybeWindowResizeEvent _ = Nothing
 
@@ -62,8 +63,7 @@ interpret randomGen inputStage networkSetupFunction inputEvents =
                       networkSetupFunction inputValueEvents
       in gameNetwork
 
-
-
+main :: IO ()
 main = do
   hspec $ do
     describe "cooldownTimer" $ do
@@ -81,7 +81,7 @@ main = do
                    , TestTimeInputEvent 800
                    , TestValueEvent 3
                    ]
-        interpret randomSeed emptyStage network events >>= flip shouldBe [3]
+        interpret randomSeed emptyStage network events >>= flip shouldBe ([3] :: [Int])
       it "does not trigger when it is not active" $ do
         randomSeed <- newStdGen
         let
@@ -94,4 +94,4 @@ main = do
                    , TestTimeInputEvent 1000
                    , TestValueEvent 2
                    ]
-        interpret randomSeed emptyStage network events >>= flip shouldBe []
+        interpret randomSeed emptyStage network events >>= flip shouldBe ([] :: [Int])

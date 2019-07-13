@@ -43,6 +43,7 @@ instance NFData Stage where
               rnf (stageData stage) `seq`
               ()
 
+printExceptions :: IO (Maybe a) -> IO (Maybe a)
 printExceptions action = catch action
   (\ e -> do
       putStrLn "An error occured"
@@ -110,9 +111,11 @@ texturesFromTileData
              flip MapL.lookup tileMapping
            )
 
+isTileLayer :: Layer -> Bool
 isTileLayer (Layer {layerContents = (LayerContentsTiles _)}) = True
 isTileLayer _ = False
 
+emptyStage :: Stage
 emptyStage =
   Stage
   { stageWidth = 0

@@ -1,6 +1,13 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Geimskell.Sound where
+module Geimskell.Sound
+  ( SoundServer
+  , SoundEffect (SoundShoot, SoundExplosion)
+  , withCsoundServer
+  , withEmptySoundServer
+  , playSoundEffect
+  )
+where
 
 import Control.Concurrent
 import Control.Concurrent.STM.TChan
@@ -12,10 +19,21 @@ import Sound.OSC.Transport.FD
 import Sound.OSC.Transport.FD.UDP
 import System.Process
 
-import Paths_geimskell
+import Paths_geimskell (getDataFileName)
 
 data SoundEffect = SoundShoot | SoundExplosion
 
+type ServerMessage = UDP -> IO ()
+
+data SoundServer =
+  SoundServer { serverCommandChannel :: TChan ServerMessage
+              , serverProcessThreadId :: ThreadId
+              , serverClientThreadId :: ThreadId
+              , serverUdpCon :: UDP
+              } |
+  EmptySoundServer
+
+sendCommand :: SoundServer -> ServerMessage -> IO ()
 sendCommand EmptySoundServer _ = return ()
 sendCommand (SoundServer { serverCommandChannel = commandChannel }
             ) action =
@@ -33,20 +51,16 @@ playSoundEffect server eff =
       )
       [Float 66.6]
 
+withEmptySoundServer :: (SoundServer -> a) -> a
 withEmptySoundServer action = action EmptySoundServer
 
+
+withCsoundServer :: (SoundServer -> IO a) -> IO a
 withCsoundServer action = do
   server <- createServer
   action server `finally` destroyServer server
 
-data SoundServer =
-  SoundServer { serverCommandChannel :: TChan (UDP -> IO ())
-              , serverProcessThreadId :: ThreadId
-              , serverClientThreadId :: ThreadId
-              , serverUdpCon :: UDP
-              } |
-  EmptySoundServer
-
+createServer :: IO SoundServer
 createServer = do
   serverCommandChannel <- newTChanIO
   serverProcessThreadId <-
@@ -60,14 +74,16 @@ createServer = do
     forkIO $ runServer serverCommandChannel serverUdpCon
   return SoundServer {..}
 
-destroyServer s@(SoundServer { serverUdpCon = udpCon
-                             , serverProcessThreadId = processThread
-                             , serverClientThreadId = clientThread}
-                ) = do
+destroyServer :: SoundServer -> IO ()
+destroyServer (SoundServer { serverUdpCon = udpCon
+                           , serverProcessThreadId = processThread
+                           , serverClientThreadId = clientThread}
+              ) = do
   mapM_ killThread [processThread, clientThread]
   close udpCon
-desroyServer EmptySoundServer = return ()
+destroyServer EmptySoundServer = return ()
 
+runServer :: TChan ServerMessage -> UDP -> IO ()
 runServer chan udp =
   go
   where

@@ -1,4 +1,9 @@
-module Shoot where
+module Shoot
+  ( Projectile(..)
+  , makeShoot
+  )
+
+where
 
 import Reactive.Banana
 
@@ -8,10 +13,9 @@ import Reactive
 data Projectile = Projectile { projectileRect :: Rectangle }
   deriving (Show,Read,Eq,Ord)
 
+translateProjectile :: Vector -> Projectile -> Projectile
 translateProjectile v p =
   p { projectileRect = translateRectangle (projectileRect p) v }
-
-projectilePosition = rectangleMidpoint . projectileRect
 
 makeShoot :: Behavior Vector
           -> Behavior (Number,Number)

@@ -6,26 +6,19 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Geimskell where
+module Geimskell (main) where
 
 import           Control.DeepSeq
 import           Control.Monad
-import           Control.Monad.Trans.Writer
-import           Data.Array
-import           Data.List
-import           Data.Maybe
-import           Data.Monoid
-import qualified Data.Set as Set
+import           Control.Monad.IO.Class
 import           Data.Tuple
 import           GHC.Generics
-import           GHC.Word
 import qualified Linear.V2 as L
 import           Reactive.Banana as RB hiding ((<>))
 import           SDL hiding (Rectangle, Vector, trace)
 import           SDL.Compositor hiding
   (clear, present, createTexture, rendererRenderTarget)
 import           SDL.Compositor.ResIndependent
-import           System.Random
 
 import           Camera
 import           Enemy
@@ -34,19 +27,17 @@ import           Geimskell.Render
 import           Geimskell.Sound
 import           Geimskell.WorldState
 import           Geometry
-import           Random
 import           Reactive
 import           Shoot
 import           Spaceship
-import           Stage
-import           TileSet
 
+gameplay :: Behavior Bool -> RB.Event () -> Game Output
 gameplay pauseB restartE = mdo
   keyboardE <- keyboardEvents
   stage <- gameStage
   let
     delta = 16666 :: Int
-  ticks <- generateTicks (pure delta)
+  ticks <- generateTicks (pure (delta :: Int))
   spawnTicks <- generateTicks (pure (1000 * 1000 :: Int))
   directionT <-
     controlls
@@ -57,7 +48,7 @@ gameplay pauseB restartE = mdo
     shootTriggerE = void $
       filterJust . fmap (buttonPressEvent ScancodeSpace) $
       keyboardE
-  (shootE :: RB.Event (), shootCooldowntimer :: RB.Behavior Word32) <-
+  (shootE :: RB.Event (), _) <-
     cooldownTimer
     (not <$> gameStopB)
     shootCooldown
@@ -98,7 +89,6 @@ gameplay pauseB restartE = mdo
       pauseB <*>
       gameOverB
     gameOverB = worldStateGameOver <$> worldStateB
-    enemiesB = wsEnemies <$> worldStateB
     projectilesB = wsProjectiles <$> worldStateB
     playerB = wsPlayer <$> worldStateB
     cameraB = wsCamera <$> worldStateB
@@ -107,7 +97,7 @@ gameplay pauseB restartE = mdo
                  (camPosition <$> cameraB) <*>
                  pure stage
     outputImage =
-      stageImage <> worldObjectImages
+      mappend <$> stageImage <*> worldObjectImages
     outputSounds = unionWith (++)
       ([SoundShoot] <$ shootE)
       ([SoundExplosion] <$ explosionE)
@@ -132,10 +122,11 @@ gameplay pauseB restartE = mdo
 data Menu = MenuStart | MenuRestart | MenuQuit
   deriving Eq
 
+menu :: Game Output
 menu = mdo
   keyboardE <- keyboardEvents
   let delta = 16000
-  ticks <- generateTicks (pure delta)
+  ticks <- generateTicks (pure (delta :: Int))
   let
     arrowUpE =
       filterE id . filterJust $
@@ -185,9 +176,11 @@ menu = mdo
              (makeVector (-0.4) (-0.4))
              (makeVector (0.4) (-0.15)))
     oImage = fromRelativeCompositor (fromIntegral <$> L.V2 screenWidth screenHeight) <$>
-      ( translateR (L.V2 0.5 0.5) . flipC (L.V2 False True) <$>
-        startImage <> restartImage <> quitImage
+      ( translateR (L.V2 0.5 0.5) . flipC (L.V2 False True) <$> image
       )
+      where
+        image = startImage `combine` restartImage `combine` quitImage
+        combine = liftA2 mappend
     oSounds = never
     oRenderTick = void ticks
     exitButtonE =
@@ -208,20 +201,22 @@ menu = mdo
       , outputRenderTick = oRenderTick
       , outputRequestsQuit = oRequestsQuit
       , outputImage =
-        (\ pause menu game ->
-           if pause then menu else game ) <$>
+        (\ isPause menuImage gameImage ->
+           if isPause then menuImage else gameImage ) <$>
         pauseB <*>
         oImage <*>
         outputImage gameOutput
       }
   return $ menuOutput
 
+main :: IO ()
 main = do
   getOptions >>= \case
     Left msg -> putStrLn msg
     Right opts ->
       withSdl $ runNetworkWithOptions "spaceshooter" menu opts
 
+withSdl :: MonadIO m => m a -> m a
 withSdl action = do
   initializeAll
   result <- action
@@ -286,16 +281,10 @@ instance Traversable Box4 where
   traverse fun (Box4 a b c d) =
     Box4 <$> fun a <*> fun b <*> fun c <*> fun d
 
-translateRVector :: Vector
-                 -> (ResIndependentImage -> ResIndependentImage)
-translateRVector = translateR . vectorToV2
-
-vectorToV2 v = L.V2 x y
-  where
-    x = pointX v
-    y = pointY v
+v2ToVector :: V2 Number -> Vector
 v2ToVector (L.V2 x y) = makeVector x y
 
+worldStateGameOver :: WorldState -> Bool
 worldStateGameOver worldstate =
   (== HealthEmpty) . playerHealth . wsPlayer $ worldstate
 
